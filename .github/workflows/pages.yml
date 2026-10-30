@@ -1,0 +1,51 @@
+name: pages
+
+# Deploys the site in `site/` to a static host.
+#
+# Everything that identifies the deployment - the project name, the account, the
+# agent URL - lives in repository settings (variables and secrets), not in this
+# tree. With no variables set, the workflow is skipped and the site is still
+# built by CI.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: vars.PAGES_DEPLOY == '1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: build
+        working-directory: site
+        env:
+          # Public, so a variable. The agent URL is a deployment detail, so it
+          # is a secret: it is baked into the bundle at build time, but it never
+          # appears in an enumerable setting.
+          VITE_REPO_URL: ${{ vars.SITE_REPO_URL }}
+          VITE_AGENT_URL: ${{ secrets.SITE_AGENT_URL }}
+          VITE_GATEWAY_URL: ${{ secrets.SITE_GATEWAY_URL }}
+        run: npm ci && npm run build
+      - name: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site/dist --project-name=${{ vars.PAGES_PROJECT }}
