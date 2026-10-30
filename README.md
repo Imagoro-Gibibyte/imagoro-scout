@@ -2,7 +2,7 @@
 
 A local-first agent platform for road-hazard dispatch, built and run on three small machines. It has five parts: an agent **harness** with signed model provenance, a hardened **serving** layer, an LLM-driven **security suite** that watches the lab it runs on, the **Scout nav/dispatch** suite, and a React **block UI** ecosystem that ties them together. The Scout suites run only on open-weight Qwen3 models served in the lab, so nothing they process (events, logs, prompts, answers) leaves the network.
 
-This repository is the public portfolio. It holds working, tested code for the pieces that stand on their own, plus write-ups of the whole system and a running log of updates. Lab infrastructure (hosts, addresses, network config, keys, deploy scripts) and the deployed prompts are deliberately not here; see [docs/publishing.md](docs/publishing.md).
+This repository is the public portfolio. It holds working, tested code for the pieces that stand on their own, plus write-ups of the whole system and a running log of updates. See [docs/publishing.md](docs/publishing.md).
 
 ```mermaid
 flowchart LR
