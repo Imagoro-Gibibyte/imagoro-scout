@@ -1,0 +1,1 @@
+Rewrite the event as a short, neutral summary safe to share. Drop secrets, usernames and internal addresses.

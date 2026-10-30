@@ -1,0 +1,32 @@
+# scout-sec-gate config. Validate with: scout-sec-gate --config <file> --check
+# Every field is checked at start; anything wrong refuses to start.
+
+[server]
+bind = "127.0.0.1:8090"          # a VPN/mesh address is fine; never a LAN or public interface
+
+[engine]
+url = "http://127.0.0.1:8000"    # OpenAI-compatible engine: vLLM, llama.cpp server, Ollama /v1
+key_file = "/etc/scout-sec/engine.key"   # optional; sent as Bearer to the engine (vLLM --api-key)
+
+[limits]
+max_body_bytes = 1048576
+timeout_s = 600                  # engine response headers; streaming isn't cut off by this
+
+[screening]
+rules_file = "/etc/scout-sec/injection_rules.json"   # v2 format, see injection_rules.json in this package
+
+# One entry per client. sha256 = sha256 hex of the client's key (never the key itself).
+# Generate a key + hash: python3 -c "import secrets,hashlib;k='kg_'+secrets.token_urlsafe(32);print(k);print(hashlib.sha256(k.encode()).hexdigest())"
+# policy: strict   = interactive / untrusted input (structural + natural-language injection rules)
+#         evidence = security-suite roles whose input is hostile on purpose (structural rules only)
+[[clients]]
+name = "kao-nuc"
+sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+models = ["qwen3-8b-awq"]
+policy = "strict"
+
+[[clients]]
+name = "scout-sec-crew"
+sha256 = "1111111111111111111111111111111111111111111111111111111111111111"
+models = ["qwen3-8b-awq"]
+policy = "evidence"

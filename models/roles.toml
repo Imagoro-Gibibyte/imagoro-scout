@@ -1,0 +1,118 @@
+# Role -> model assignments across the Imagoro Scout suites (as deployed, 2026-10-29).
+# Every model is Qwen3 lineage, Apache-2.0, not abliterated. `render.py` turns the [security]
+# and [nav] roles into Ollama Modelfiles; [serving] records the vLLM side.
+#
+#   base      = Ollama tag the role's layer is built FROM
+#   temp      = sampling temperature (contract roles are pinned to 0.0)
+#   thinking  = only the manager-class roles reason; everyone else runs with reasoning off
+#   tier      = where it runs: heavy (16 GB GPU), light (8 GB GPU), edge (4 GB GPU)
+
+[meta]
+prompt_version = "1.3.0"
+num_ctx = 8192
+lineage = "qwen3"
+license = "Apache-2.0"
+
+# Security suite: 8 roles, one cycle every 30 min (skipped when nothing is low severity or above).
+[security.manager]
+tag = "scout-sec-manager"
+base = "scout-hermes-hc1.1.0"
+temp = 0.1
+thinking = true
+tier = "light"     # moving to the heavy tier (vLLM) with this as the fallback
+[security.error]
+tag = "scout-sec-error"
+base = "scout-dev"
+temp = 0.2
+thinking = false
+tier = "light"
+[security.enforcer]
+tag = "scout-sec-enforcer"
+base = "scout-core1.0.5"
+temp = 0.0
+thinking = false
+tier = "light"
+[security.alert]
+tag = "scout-sec-alert"
+base = "qwen3:8b"
+temp = 0.0
+thinking = false
+tier = "light"
+[security.intel]
+tag = "scout-sec-intel"
+base = "qwen3:8b"
+temp = 0.0
+thinking = false
+tier = "light"
+[security.vet]
+tag = "scout-sec-vet"
+base = "qwen3:8b"
+temp = 0.0
+thinking = false
+tier = "light"
+[security.rank]
+tag = "scout-sec-rank"
+base = "qwen3:8b"
+temp = 0.0
+thinking = false
+tier = "light"
+[security.sanitizer]
+tag = "scout-sec-sanitizer"
+base = "qwen3:8b"
+temp = 0.0
+thinking = false
+tier = "light"
+
+# Scout nav / dispatch crew: an orchestrating manager plus narrow, no-think specialists.
+[nav.manager]
+tag = "scout-hermes-hc1.1.0"
+base = "qwen3:8b"
+temp = 0.1
+thinking = true
+tier = "light"
+[nav.dev]
+tag = "scout-dev"
+base = "scout-core1.0.5"
+temp = 0.2
+thinking = false
+tier = "light"
+[nav.core]
+tag = "scout-core1.0.5"
+base = "qwen3:4b-instruct-2507"
+temp = 0.0
+thinking = false
+tier = "edge"
+[nav.vet]
+tag = "scout-vet1.0.6"
+base = "qwen3:4b-instruct-2507"
+temp = 0.0
+thinking = false
+tier = "edge"
+[nav.alert]
+tag = "scout-alert"
+base = "qwen3:4b-instruct-2507"
+temp = 0.0
+thinking = false
+tier = "edge"
+[nav.intel]
+tag = "scout-intel"
+base = "qwen3:4b-instruct-2507"
+temp = 0.0
+thinking = false
+tier = "edge"
+[nav.rank]
+tag = "scout-rank"
+base = "qwen3:4b-instruct-2507"
+temp = 0.0
+thinking = false
+tier = "edge"
+
+# Heavy tier (vLLM): safetensors, pinned revision, SHA-256 manifest checked before every start.
+[serving.vllm]
+model = "Qwen/Qwen3-8B-AWQ"
+served_name = "qwen3-8b-awq"
+quant = "AWQ 4-bit"
+engine = "vLLM 0.19.1 (ROCm 7.13, gfx1200)"
+max_model_len = 16384
+gpu_memory_utilization = 0.85
+used_by = ["harness.manager", "harness.hermes"]

@@ -1,0 +1,47 @@
+{
+  "snapshot": {
+    "type": "pipeline/snapshot",
+    "ts": 1757950000000,
+    "payload": {
+      "run": { "status": "running", "started": 1757949000000, "phase": "vet", "artifact": "local_brief.json" },
+      "metrics": {
+        "captured": 142,
+        "skippedSilence": 33,
+        "skippedClipped": 7,
+        "llmAlert": 4,
+        "softFallback": 2,
+        "jurisdictionCount": 1,
+        "notify": { "total": 6, "normal": 2, "alerts": 4, "queued": 0, "browserSent": 4, "parseErrors": 1 }
+      },
+      "audit": { "modalState": "idle", "lastEvent": "transcript/update", "quietMode": false },
+      "weather": { "conditions": "clear", "tempF": 72, "humidity": 34, "windMph": 8 },
+      "position": { "lat": 33.4484, "lon": -112.074, "accuracy": 18, "heading": 214 },
+      "activeAlert": { "label": "1720 W Cactus / high-speed unit", "severity": "alert", "lat": 33.596, "lon": -112.103 },
+      "blackboard": {
+        "pipeline": { "last_brief": "M0_OK", "dev_mode": "debug", "rank": 0.91 },
+        "crew": { "tasks": 6, "phase": "vet", "owners_pending": 2 },
+        "audit": { "exported": 42, "signers": ["scout-ops"], "policy": "raw" }
+      },
+      "recent": [
+        { "type": "alert/fire", "ts": 1757949500000, "label": "priority call" },
+        { "type": "transcript/update", "ts": 1757949600000, "text": "…heading north on I-17…" }
+      ]
+    }
+  },
+  "stream": [
+    { "type": "map/gps", "ts": 1757950001000, "payload": { "lat": 33.4486, "lon": -112.0744, "heading": 215, "accuracy": 15 } },
+    { "type": "map/alert", "ts": 1757950002000, "payload": { "label": "US-60 @ 83rd Ave", "severity": "warn", "lat": 33.498, "lon": -112.245 } },
+    { "type": "metrics/update", "ts": 1757950003000, "payload": { "captured": 143, "llmAlert": 5 } },
+    { "type": "audit/event", "ts": 1757950004000, "payload": { "dispatched": 7, "alerts": 5, "browserSent": 5, "lastEvent": "alert/notify", "modalState": "active" } },
+    { "type": "weather/update", "ts": 1757950005000, "payload": { "conditions": "partly-cloudy", "tempF": 71, "humidity": 36, "windMph": 9 } },
+    { "type": "visualizer/rms", "ts": 1757950006000, "payload": { "rms": [0.12, 0.38, 0.62, 0.9, 0.44, 0.7, 0.2, 0.35] } },
+    { "type": "chat/message", "ts": 1757950007000, "payload": { "role": "hermes", "text": "local brief written; vet score 0.91", "model": "scout-hermes-hc1.0.0" } },
+    { "type": "console/log", "ts": 1757950008000, "payload": { "line": "[pipeline] phase vet complete → rank" } },
+    { "type": "terminal/state", "ts": 1757950009000, "payload": { "pwd": "/opt/scout", "running": true, "prompt": "scout@" } },
+    { "type": "blackboard/snapshot", "ts": 1757950010000, "payload": { "category": "pipeline", "values": { "last_brief": "M0_OK", "dev_mode": "debug", "rank": 0.91 } } },
+    { "type": "pipeline/run", "ts": 1757950011000, "payload": { "status": "ranking", "phase": "rank", "started": 1757949000000 } },
+    { "type": "external/slotC", "ts": 1757950012000, "payload": { "source": "external plugin card", "ok": true } },
+    { "type": "geofence/telemetry", "ts": 1757950013000, "payload": { "zone": "AZ-SE", "inside": true, "etaS": 720 } },
+    { "type": "hazard/confidence", "ts": 1757950014000, "payload": { "hazard": "flash-flood risk", "confidence": 0.82 } }
+  ]
+}

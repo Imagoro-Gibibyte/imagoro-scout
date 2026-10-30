@@ -1,0 +1,5 @@
+# path:line-substring   # reason
+packages/security-core/tests/test_control_plane.py:192.168.50.10   # fixture: a private target the guard must refuse to block
+packages/security-core/tests/fixtures/protected_nodes.yaml:*   # made-up private ranges for guard tests (not any real network)
+tools/test_tools.py:*   # the checker's own tests: every line is a planted finding
+packages/security-core/tests/test_screening.py:192.168.50.23   # redaction test input (made-up internal address)
