@@ -2,7 +2,7 @@
 
 A local-first agent platform for road-hazard dispatch, built and run on three small machines. It has five parts: an agent **harness** with signed model provenance, a hardened **serving** layer, an LLM-driven **security suite** that watches the lab it runs on, the **Scout nav/dispatch** suite, and a React **block UI** ecosystem that ties them together. The Scout suites run only on open-weight Qwen3 models served in the lab, so nothing they process (events, logs, prompts, answers) leaves the network.
 
-This repository is the public portfolio. It holds working, tested code for the pieces that stand on their own, plus write-ups of the whole system and a running log of updates. See [docs/publishing.md](docs/publishing.md).
+This repository is the public portfolio. It holds working, tested code for the pieces that stand on their own, plus write-ups of the whole system and a running log of updates. See [docs/publishing.md](docs/publishing.md). The portfolio itself is the static site in [`site`](site), which also serves the browser terminal.
 
 ```mermaid
 flowchart LR
@@ -52,6 +52,7 @@ flowchart LR
 | [`docs`](docs) | How each part works and why | |
 | [`updates`](updates) | Holistic progress entries ported from the private repos' PRs and commits | |
 | [`tools`](tools) | `leakcheck` (runs in CI) and `new_update` (drafts an entry, refuses anything that leaks) | `python -m unittest` (7) |
+| [`site`](site) | The public portfolio and the browser terminal, as one static build (Vite + React) | `npm run build` |
 | [`AGENTS.md`](AGENTS.md) | how updates and package syncs are done, by people or agents | |
 
 Run everything: `./scripts/test-all.sh` (needs Python 3.11+, Rust, Node 20+).

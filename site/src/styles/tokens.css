@@ -1,0 +1,87 @@
+/* The shared token set. Values match the console theme, so the site and the
+   terminal read as one product rather than two. */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b1020;
+  --bg-top: #111933;
+  --bg-surface: #141c2d;
+  --bg-surface-alpha: rgba(20, 28, 45, 0.82);
+  --bg-overlay: rgba(14, 22, 38, 0.94);
+  --bg-input: #020617;
+  --bg-tab: #0f172a;
+  --bg-tab-active: #1e293b;
+  --bg-raised: #1e293b;
+  --border: rgba(126, 156, 201, 0.22);
+  --border-strong: #1e293b;
+  --text: #e8eeff;
+  --text-body: #e2e8f0;
+  --text-muted: #9fb0cf;
+  --text-strong: #f8fafc;
+  --accent: #4f8cff;
+  --accent-primary: #1d4ed8;
+  --accent-hover: #2563eb;
+  --accent-dark: #2455c5;
+  --panel-title: #93c5fd;
+  --teal: #00c9c7;
+  --danger: #b91c1c;
+  --danger-hover: #dc2626;
+  --disabled-bg: #334155;
+  --disabled-text: #94a3b8;
+  --status-ok-bg: #052e16;
+  --status-ok-text: #86efac;
+  --status-ok-border: #166534;
+  --chip-ok: #9ff7ae;
+  --chip-warn: #ffd686;
+  --chip-bg: rgba(20, 28, 45, 0.8);
+  --selection: #1d4ed8;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+  --spacing-s: 4px;
+  --spacing-m: 8px;
+  --spacing-l: 14px;
+  --spacing-xl: 22px;
+  --font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 14px;
+  --layout-card-gap: 14px;
+  --layout-grid-min: 320px;
+  --layout-canvas-default: 1160px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, var(--bg-top), var(--bg));
+  color: var(--text-body);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--text-strong);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

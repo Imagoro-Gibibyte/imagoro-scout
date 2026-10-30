@@ -1,0 +1,313 @@
+/* The site shell: header, pages, footer. One page at a time, one terminal. */
+
+.pf-shell {
+  --font-family: "Courier New", Courier, ui-monospace, monospace;
+  --font-mono: "Courier New", Courier, ui-monospace, monospace;
+  --font-size-xs: 17px;
+  --font-size-sm: 18px;
+  --font-size-md: 19px;
+  --font-size-lg: 20px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.pf-shell-term {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---------- header ---------- */
+
+.pf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-l) var(--spacing-xl);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface-alpha);
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(6px);
+  z-index: 10;
+  flex: none;
+}
+
+.pf-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-strong);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.pf-brand-mark {
+  color: var(--teal);
+  font-size: 26px;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(0, 201, 199, 0.55);
+}
+
+.pf-brand-name {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.pf-nav {
+  display: flex;
+  gap: var(--spacing-s);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pf-nav-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-s) var(--spacing-m);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.pf-nav-link:hover {
+  color: var(--text-strong);
+  border-color: var(--border);
+  background: var(--bg-raised);
+}
+
+.pf-nav-link[aria-current="page"] {
+  color: var(--teal);
+  border-color: rgba(0, 201, 199, 0.4);
+  background: rgba(0, 201, 199, 0.07);
+}
+
+/* ---------- main ---------- */
+
+.pf-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+}
+
+.pf-main-term {
+  max-width: 1240px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: var(--spacing-l);
+}
+
+.pf-page-head h1,
+.pf-hero h1 {
+  margin: 0 0 var(--spacing-m);
+  color: var(--text-strong);
+  line-height: 1.15;
+}
+
+.pf-page-head h1 {
+  font-size: 34px;
+}
+
+.pf-hero h1 {
+  font-size: clamp(28px, 5vw, 46px);
+  max-width: 22ch;
+  color: var(--text-strong);
+  text-shadow: 0 0 32px rgba(0, 201, 199, 0.18);
+}
+
+.pf-hero {
+  padding: var(--spacing-xl) 0 var(--spacing-l);
+}
+
+.pf-section {
+  margin: var(--spacing-xl) 0;
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--border);
+}
+
+.pf-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.pf-section h2 {
+  font-size: 26px;
+  margin: 0 0 var(--spacing-m);
+  color: var(--panel-title);
+}
+
+.pf-sub {
+  color: var(--text-muted);
+  margin: 0 0 var(--spacing-l);
+  max-width: 74ch;
+  line-height: 1.65;
+}
+
+.pf-muted {
+  color: var(--text-muted);
+}
+
+.pf-muted a {
+  color: var(--text-muted);
+}
+
+.pf-cards {
+  list-style: none;
+  margin: var(--spacing-l) 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--layout-card-gap);
+}
+
+.pf-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-l);
+  border-top: 2px solid rgba(0, 201, 199, 0.35);
+}
+
+.pf-card h3 {
+  margin: 0 0 var(--spacing-s);
+  font-size: var(--font-size-lg);
+  color: var(--text-strong);
+}
+
+.pf-card p {
+  margin: 0;
+  color: var(--text-body);
+  line-height: 1.6;
+}
+
+.pf-points {
+  margin: var(--spacing-l) 0;
+  padding-left: var(--spacing-xl);
+  color: var(--text-body);
+  line-height: 1.8;
+}
+
+.pf-points li + li {
+  margin-top: var(--spacing-s);
+}
+
+/* ---------- flow ---------- */
+
+.pf-flow {
+  list-style: none;
+  counter-reset: step;
+  margin: var(--spacing-l) 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-l);
+}
+
+.pf-flow-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-s);
+  padding: var(--spacing-l);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.pf-flow-node::before {
+  counter-increment: step;
+  content: "0" counter(step);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--teal);
+}
+
+.pf-flow-name {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.pf-flow-body {
+  color: var(--text-muted);
+  line-height: 1.55;
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- cta ---------- */
+
+.pf-cta-links {
+  display: flex;
+  gap: var(--spacing-m);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-l);
+}
+
+.pf-btn {
+  display: inline-block;
+  padding: var(--spacing-m) var(--spacing-xl);
+  border-radius: var(--radius-md);
+  background: var(--accent-primary);
+  color: var(--text-strong);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  border: 1px solid transparent;
+}
+
+.pf-btn:hover {
+  background: var(--accent-hover);
+  color: var(--text-strong);
+}
+
+/* ---------- footer ---------- */
+
+.pf-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-l);
+  flex-wrap: wrap;
+  padding: var(--spacing-l) var(--spacing-xl);
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface-alpha);
+  flex: none;
+}
+
+.pf-footer .pf-muted {
+  font-size: var(--font-size-sm);
+  max-width: 90ch;
+}
+
+@media (max-width: 720px) {
+  .pf-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-m);
+    padding: var(--spacing-m) var(--spacing-l);
+  }
+
+  .pf-main {
+    padding: var(--spacing-l);
+  }
+
+  .pf-page-head h1 {
+    font-size: 27px;
+  }
+
+  .pf-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
