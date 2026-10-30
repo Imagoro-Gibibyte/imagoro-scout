@@ -1,6 +1,6 @@
 # What's published, and how it stays safe
 
-This repo is public; the lab it describes isn't. Code is ported from private repos, so the line is explicit and checked by machine.
+This repo is public; the lab it describes isn't. Code is ported from private repos, so the line is explicit and checked by machine. The step-by-step procedure for update entries and package syncs, for people and agents alike, is in [AGENTS.md](../AGENTS.md).
 
 ## In
 
