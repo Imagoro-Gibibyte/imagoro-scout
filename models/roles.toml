@@ -19,7 +19,7 @@ tag = "scout-sec-manager"
 base = "scout-hermes-hc1.1.0"
 temp = 0.1
 thinking = true
-tier = "light"     # moving to the heavy tier (vLLM) with this as the fallback
+tier = "light"     # the security suite stays on the hub and agent box
 [security.error]
 tag = "scout-sec-error"
 base = "scout-dev"

@@ -41,11 +41,20 @@ async fn main() {
         return;
     }
 
-    let listener = match tokio::net::TcpListener::bind(&bind).await {
-        Ok(l) => l,
-        Err(e) => {
-            tracing::error!("bind {bind}: {e}");
-            std::process::exit(2);
+    // The mesh address may not exist yet (VPN still coming up): keep waiting. A gate waiting for
+    // its address exposes nothing, and giving up would leave the entry closed until someone
+    // notices. The address itself was validated with the config.
+    let mut attempt = 0u32;
+    let listener = loop {
+        match tokio::net::TcpListener::bind(&bind).await {
+            Ok(l) => break l,
+            Err(e) => {
+                if attempt % 120 == 0 {
+                    tracing::warn!("waiting to bind {bind}: {e}");
+                }
+                attempt = attempt.wrapping_add(1);
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            }
         }
     };
     tracing::info!("listening on {bind}");

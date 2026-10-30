@@ -33,8 +33,8 @@ flowchart LR
   UI --> KAO --> GATE --> VLLM
   KAO --> KG --> OLL
   DRV --> BB
-  SRC --> BB --> CREW --> KG
-  COL --> SBB --> SCREW --> KG
+  SRC --> BB --> CREW --> OLL
+  COL --> SBB --> SCREW --> OLL
   SCREW --> SBB --> EXE
   UI -. signed operator API .-> SBB
 ```
@@ -43,7 +43,7 @@ flowchart LR
 
 | Path | What | Runs / tests |
 |---|---|---|
-| [`packages/gate`](packages/gate) | **scout-sec-gate** (Rust): key auth, per-client model allowlist, per-role content rules, streaming proxy to any OpenAI-compatible engine | `cargo test` (18) |
+| [`packages/gate`](packages/gate) | **scout-sec-gate** (Rust): key auth, per-client model allowlist, per-role content rules, streaming proxy to any OpenAI-compatible engine | `cargo test` (19) |
 | [`packages/keygate`](packages/keygate) | **keygate** (Python, stdlib): per-client keys and model scoping in front of Ollama/vLLM; loopback sidecar for single-key harnesses | `python -m unittest` (16) |
 | [`packages/security-core`](packages/security-core) | Security suite core: role-scoped blackboard (HMAC tokens, ACLs, Ed25519 operator API), injection screening, redaction, protected-node guard, countermeasure executor | `pytest` (29) |
 | [`packages/hazard-sources`](packages/hazard-sources) | Scout nav: NWS / WZDx / 511 / TomTom feeds normalised into signed, citable hazard events; coordinate-free geohash shards | `python -m unittest` (15) |
@@ -67,7 +67,7 @@ Run everything: `./scripts/test-all.sh` (needs Python 3.11+, Rust, Node 20+).
 
 ## Status
 
-Live in the lab: the security suite (since 2026-10-27), the nav hazard pipeline and blackboard, the Kao gateway, and keygate in front of every engine. The Rust gate is tested but not deployed yet; it replaces keygate in front of vLLM next. See [updates](updates/README.md) for the running log.
+Live in the lab: the security suite (since 2026-10-27), the nav hazard pipeline and blackboard, the Kao gateway with its heavy roles on vLLM, scout-sec-gate in front of vLLM, and keygate in front of the Ollama engines. See [updates](updates/README.md) for the running log.
 
 ## License
 

@@ -1,6 +1,6 @@
 # Harness: Kao
 
-Kao is the agentic harness for the Scout suite: it exposes every Scout capability as a **native tool** over MCP (stdio, Content-Length framing) and an HTTP JSON-RPC gateway (`/rpc` with a bearer session, `/health` open). Clients are the desktop Harness Console, the Command Center and MCP-speaking agents. Its source is private; this page describes how it works.
+Kao is the agentic harness for the Scout suite: it exposes every Scout capability as a **native tool** over MCP (stdio, Content-Length framing) and an HTTP JSON-RPC gateway (`/rpc` with a bearer session, `/health` open). Kao's agents run on the agent box; its console runs on the workstation. Clients are that desktop Harness Console, the Command Center and MCP-speaking agents, and the console also gets its own keyed prompt access through the serving gate. Its source is private; this page describes how it works.
 
 ## Shape
 

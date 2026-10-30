@@ -13,7 +13,7 @@ Per request, first failure wins and nothing is forwarded:
 Every refusal but auth is the same 404.
 
 ```sh
-cargo test                                   # 12 unit + 6 end-to-end
+cargo test                                   # 13 unit + 6 end-to-end
 cargo run -- --config gate.example.toml --check
 ```
 Config: [`gate.example.toml`](gate.example.toml). Rules: [`injection_rules.json`](injection_rules.json) (v2: id, pattern, policies, roles, action, severity, why).

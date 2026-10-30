@@ -6,6 +6,8 @@ area: serving
 
 # Heavy models off the small box; keys instead of IP lists
 
+> **Corrected 2026-10-30:** this entry first said all manager-class models would move. The security suite's manager stays on the agent box; only Kao's heavy roles use the workstation. See [Kao on vLLM](2026-10-30-kao-on-vllm.md).
+
 Manager-class models move to the workstation's 16 GB card. The 8 GB agent box keeps the runtimes and the no-think specialists, and every engine now sits on loopback behind a gate that checks a per-client key.
 
 ## What changed
