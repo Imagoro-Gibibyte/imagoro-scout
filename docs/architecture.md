@@ -7,10 +7,10 @@ The lab is three machines on a WireGuard mesh. Cross-machine traffic goes over t
 | Role | GPU | Tier | Runs |
 |---|---|---|---|
 | **Hub** | 4 GB | edge | both blackboards, hazard sources, map/routing backend, the 4B nav specialists, security collector + executor, log export, web edge |
-| **Agent box** | 8 GB laptop GPU | light | the Kao harness, the security crew (8 roles on 8B weights), the nav crew runner, collector + executor |
-| **Workstation** | 16 GB (RDNA 4) | heavy | vLLM (manager-class models) *or* Ollama for third-party harnesses, the desktop consoles |
+| **Agent box** | 8 GB laptop GPU | light | the Kao harness and its agents, the security crew (8 roles on 8B weights, manager included), the nav crew runner, collector + executor |
+| **Workstation** | 16 GB (RDNA 4) | heavy | heavy inference: vLLM for Kao's manager roles *or* Ollama for third-party harnesses; the Kao console and the Security Console |
 
-A design rule that came out of running it: **heavy models don't go on the 8 GB box.** Its context windows are too small for manager-class work, so managers move to the workstation's vLLM and the agent box keeps the runtimes and the no-think specialists ([updates/2026-10-28-nuc-pivot](../updates/2026-10-28-serving-pivot-and-key-auth.md)).
+Two design rules came out of running it. **Heavy inference runs on the workstation:** the 8 GB box's context windows are too small for it, so Kao's agents stay on the agent box and call the workstation's vLLM over the mesh. **The security suite runs entirely on the hub and agent box**, so it keeps working when the workstation is off; the workstation only holds its console. Each project ships its own console ([update](../updates/2026-10-30-kao-on-vllm.md)).
 
 ## Data flow
 

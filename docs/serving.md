@@ -7,13 +7,13 @@ The workstation's 16 GB card serves one stack at a time:
 | Stack | Engine | For | Why separate |
 |---|---|---|---|
 | **Ollama** | GGUF models, OpenAI `/v1` | third-party harnesses (coding agents, assistants) | the widest client support; easy model swaps |
-| **vLLM** | safetensors (AWQ 4-bit), OpenAI `/v1` | the project harnesses (Kao, security suite) | concurrency, prefix caching, structured outputs, a path to a multi-tenant rack |
+| **vLLM** | safetensors (AWQ 4-bit), OpenAI `/v1` | heavy inference for the project harnesses (Kao's manager roles and console) | concurrency, prefix caching, structured outputs, a path to a multi-tenant rack |
 
 A switch script stops one and starts the other. Each engine listens only on loopback; the mesh reaches it through a gate on the workstation's mesh address. Smaller GPUs elsewhere run Ollama for the no-think specialists, behind the same kind of gate.
 
 ## Gates
 
-| | [keygate](../packages/keygate) (Python, deployed) | [scout-sec-gate](../packages/gate) (Rust, next) |
+| | [keygate](../packages/keygate) (Python, in front of Ollama) | [scout-sec-gate](../packages/gate) (Rust, in front of vLLM) |
 |---|---|---|
 | Auth | bearer / `X-Api-Key`, SHA-256 hashed, constant-time | same |
 | Scope | model allowlist per key; filtered `/api/tags`, `/v1/models` | same |
@@ -48,6 +48,7 @@ The heavy tier runs AMD's `gfx120X` vLLM image in WSL2 on Windows, via ROCm's DX
 | `torch.compile` fails on a read-only root (`/root/.triton`) | keep the rootfs read-only; point `TRITON_CACHE_DIR` / `TORCHINDUCTOR_CACHE_DIR` at the cache volume |
 | a healthy vLLM died after a few minutes | WSL stops its VM when nothing on the Windows side is attached, and a running container doesn't count; hold one tagged session open while serving |
 | the container couldn't publish its port | mirrored networking shares one port space with Windows: engine and gate must not use the same port number on any address |
+| raw `<think>` in answers through the gate | start vLLM with `--reasoning-parser qwen3` |
 | VRAM | vLLM reserves a fixed share of the card at start; a game holding 10 GB means it refuses to start. Switching stacks is a manual choice |
 
 Container hardening: no capabilities, `no-new-privileges`, read-only root, loopback-only port, offline model loading, telemetry off, and a SHA-256 manifest check of the weights before every start.

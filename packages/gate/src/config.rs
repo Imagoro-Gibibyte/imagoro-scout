@@ -122,6 +122,9 @@ pub fn parse(text: &str) -> Result<Loaded, String> {
 }
 
 fn validate(cfg: &Config) -> Result<(), String> {
+    if cfg.server.bind.parse::<std::net::SocketAddr>().is_err() {
+        return Err(format!("server.bind {:?} must be ip:port", cfg.server.bind));
+    }
     let url = cfg.engine.url.trim_end_matches('/');
     if !url.starts_with("http://") || url.len() <= "http://".len() {
         return Err("engine.url must be http://host:port (the engine is loopback or mesh-local)".into());
@@ -189,6 +192,18 @@ mod tests {
         let bad_url = cfg(&format!("[[clients]]\nname = \"a\"\nsha256 = \"{H}\"\nmodels = [\"m\"]\npolicy = \"strict\"\n"))
             .replace("http://127.0.0.1:8000", "https://example.com");
         assert!(parse(&bad_url).is_err());
+    }
+
+    #[test]
+    fn bad_bind_is_an_error() {
+        let c = cfg(&format!("[[clients]]
+name = \"a\"
+sha256 = \"{H}\"
+models = [\"m\"]
+policy = \"strict\"
+"))
+            .replace("127.0.0.1:0", "mesh-host:8000");
+        assert!(parse(&c).is_err());
     }
 
     #[test]

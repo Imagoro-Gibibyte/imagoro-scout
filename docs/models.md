@@ -10,7 +10,7 @@ Assignments (source of truth: [`models/roles.toml`](../models/roles.toml)):
 
 | Suite | Role | Built from | Temp | Reasoning | Tier |
 |---|---|---|---|---|---|
-| security | manager | hermes 8B layer | 0.1 | **on** | light, moving to heavy |
+| security | manager | hermes 8B layer | 0.1 | **on** | light |
 | security | error | dev layer | 0.2 | off | light |
 | security | enforcer | core layer | 0.0 | off | light |
 | security | alert, intel, vet, rank, sanitizer | `qwen3:8b` | 0.0 | off | light |
@@ -26,6 +26,8 @@ Rules the renderer enforces: contract roles stay at temperature ≤ 0.2; one tag
 Qwen3 has a soft switch (`/no_think` in a turn) and a hard one (`enable_thinking`). The Modelfiles put `/no_think` in the system prompt. Agent frameworks replace the Modelfile's system prompt with their own, so the switch silently vanished, and the specialists reasoned on every call. When the reasoning filled `max_tokens`, the answer came back empty and the cycle failed.
 
 The fix is to turn reasoning off **per request**: `reasoning_effort: "none"` on Ollama's OpenAI endpoint, or `chat_template_kwargs: {"enable_thinking": false}` on vLLM. Do this for every role marked non-thinking. Measured: 1,024 tokens of hidden reasoning with an empty answer became 71 tokens with a complete answer.
+
+Roles that do reason need the opposite care on vLLM: start it with `--reasoning-parser qwen3`. Without that, the `<think>` block arrives inside `message.content`, so a client gets raw reasoning and a low `max_tokens` can leave no answer at all. With it, reasoning arrives in its own field and the client sees only the answer.
 
 Where variance is wanted, it's shaped with `top_p` / `top_k`, never by raising temperature on contract roles.
 

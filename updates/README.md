@@ -4,6 +4,7 @@ Holistic entries: what changed across the system, why, and what it means. They'r
 
 | Date | Area | Entry |
 |---|---|---|
+| 2026-10-30 | harness | [Kao on vLLM, through the Rust gate](2026-10-30-kao-on-vllm.md) |
 | 2026-10-29 | security | [Logs into the notebook, and surviving a cold restart](2026-10-29-logs-and-restart.md) |
 | 2026-10-28 | serving | [The gate learns to tell evidence from attacks](2026-10-28-gate-content-rules.md) |
 | 2026-10-28 | serving | [vLLM on an RDNA 4 card, under WSL](2026-10-28-vllm-on-rdna4.md) |
