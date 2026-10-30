@@ -52,6 +52,7 @@ flowchart LR
 | [`docs`](docs) | How each part works and why | |
 | [`updates`](updates) | Holistic progress entries ported from the private repos' PRs and commits | |
 | [`tools`](tools) | `leakcheck` (runs in CI) and `new_update` (drafts an entry, refuses anything that leaks) | `python -m unittest` (7) |
+| [`AGENTS.md`](AGENTS.md) | how updates and package syncs are done, by people or agents | |
 
 Run everything: `./scripts/test-all.sh` (needs Python 3.11+, Rust, Node 20+).
 
