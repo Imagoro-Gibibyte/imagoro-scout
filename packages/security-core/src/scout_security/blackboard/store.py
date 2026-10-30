@@ -1,0 +1,441 @@
+# Copyright 2026 Scout Project Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""SQLite-backed categorized security blackboard with role ACLs.
+
+Categories
+----------
+events     raw security events written by auditors (already sanitized upstream)
+findings   vetted / ranked findings from auditors
+decisions  manager decisions (ALLOWED / DENIED / ESCALATE) and enforcer verdicts
+dev_debug  error-handler debug notes about the suite's own tooling
+
+Roles
+-----
+alert, intel, vet, rank   write events + findings; read events/findings/decisions
+core (policy enforcer)    write decisions (verdicts); read events/findings/decisions
+sanitizer                 write events (sanitized summaries); read events
+manager                   read all; summarize/rewrite events+findings; write decisions
+dev (error handler)       write/read dev_debug; read events/findings/decisions
+observer                  read-only findings + decisions (dashboards, admin tools)
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import socket
+import sqlite3
+import threading
+import time
+import uuid
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Sequence
+
+CATEGORIES = ("events", "findings", "decisions", "dev_debug", "telemetry")
+
+_AUDITORS = ("alert", "intel", "vet", "rank")
+
+ROLE_ACL: Dict[str, Dict[str, Sequence[str]]] = {
+    "events": {
+        "read": _AUDITORS + ("core", "sanitizer", "manager", "dev"),
+        "write": _AUDITORS + ("sanitizer",),
+        "summarize": ("manager",),
+    },
+    "findings": {
+        "read": _AUDITORS + ("core", "manager", "dev", "observer"),
+        "write": _AUDITORS,
+        "summarize": ("manager",),
+    },
+    "decisions": {
+        "read": _AUDITORS + ("core", "manager", "dev", "observer"),
+        "write": ("manager", "core"),
+        "summarize": ("manager",),
+    },
+    "dev_debug": {
+        "read": ("dev", "manager"),
+        "write": ("dev",),
+        "summarize": ("dev",),
+    },
+    # Run statistics for the operator's log vault: eval reports, cycle timings and,
+    # later, inference metadata from the serving gate. Never prompts or payloads.
+    "telemetry": {
+        "read": ("dev", "manager", "observer"),
+        "write": ("dev", "manager"),
+        "summarize": ("manager",),
+    },
+}
+
+# Roles a device may self-onboard as through /v1/keys/authorize. Admin roles
+# (manager, dev) are only issued through the admin-secret path.
+# executor: control endpoints only (fetch approved countermeasures, report outcomes).
+DEVICE_ROLES = frozenset({"alert", "intel", "vet", "rank", "core", "sanitizer", "observer", "executor"})
+
+KIND_RAW = "raw"
+KIND_SUMMARY = "summary"
+KIND_REWRITE = "rewrite"
+
+
+def _default_db_path() -> Path:
+    env = os.getenv("SCOUT_BLACKBOARD_PATH", "").strip()
+    if env:
+        return Path(env).expanduser().resolve()
+    # project data dir
+    root = Path(__file__).resolve().parents[3]
+    return (root / "data" / "blackboard" / "scout_blackboard.db").resolve()
+
+
+@dataclass
+class Entry:
+    id: str
+    category: str
+    kind: str
+    role: str
+    author: str
+    host: str
+    title: str
+    body: str
+    tags: List[str]
+    meta: Dict[str, Any]
+    created_at: float
+    updated_at: float
+    superseded_by: Optional[str] = None
+    active: int = 1
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = asdict(self)
+        return d
+
+
+class BlackboardStore:
+    """Thread-safe store (SQLite WAL) suitable for local multi-process + HTTP frontends.
+
+    memory=True runs an in-RAM store (journal_mode=MEMORY) for per-peer sandbox
+    contexts — e.g. a sandboxed blackboard whose context lives in the device RAM,
+    while the hub runs the same class file-backed.
+    """
+
+    def __init__(
+        self,
+        db_path: Optional[Path] = None,
+        *,
+        memory: bool = False,
+        sandbox_writers: Optional[Sequence[str]] = None,
+    ) -> None:
+        self.memory = bool(memory)
+        if self.memory:
+            self.db_path = Path(":memory:")
+            self._mem_conn = sqlite3.connect(":memory:", check_same_thread=False)
+            self._mem_conn.row_factory = sqlite3.Row
+        else:
+            self._mem_conn = None
+            self.db_path = Path(db_path) if db_path else _default_db_path()
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        # Sandbox pipeline policy: roles allowed to write pipeline kind=raw.
+        # None -> rely on ROLE_ACL (default full specialist writers).
+        self.sandbox_writers: Optional[set[str]] = (
+            {str(r).strip().lower() for r in sandbox_writers if str(r).strip()}
+            if sandbox_writers is not None
+            else None
+        )
+        self._lock = threading.RLock()
+        self._init_db()
+
+    @contextmanager
+    def _conn(self):
+        if self._mem_conn is not None:
+            yield self._mem_conn
+            return
+        conn = sqlite3.connect(str(self.db_path), timeout=30, isolation_level=None)
+        conn.row_factory = sqlite3.Row
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
+            conn.execute("PRAGMA busy_timeout=30000")
+            yield conn
+        finally:
+            conn.close()
+
+    def close(self) -> None:
+        if self._mem_conn is not None:
+            try:
+                self._mem_conn.close()
+            finally:
+                self._mem_conn = None
+
+    def _init_db(self) -> None:
+        with self._lock, self._conn() as conn:
+            if self._mem_conn is not None:
+                conn.execute("PRAGMA journal_mode=MEMORY")
+                conn.execute("PRAGMA synchronous=OFF")
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS entries (
+                    id TEXT PRIMARY KEY,
+                    category TEXT NOT NULL,
+                    kind TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    author TEXT NOT NULL,
+                    host TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    body TEXT NOT NULL,
+                    tags TEXT NOT NULL DEFAULT '[]',
+                    meta TEXT NOT NULL DEFAULT '{}',
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL,
+                    superseded_by TEXT,
+                    active INTEGER NOT NULL DEFAULT 1
+                )
+                """
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_entries_cat_active_time "
+                "ON entries(category, active, created_at DESC)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_entries_role ON entries(role, category)"
+            )
+
+    @staticmethod
+    def normalize_role(role: str) -> str:
+        r = (role or "").strip().lower()
+        aliases = {
+            "sec_manager": "manager",
+            "mgr": "manager",
+            "sec_error_handler": "dev",
+            "error": "dev",
+            "sec_auditor_alert": "alert",
+            "sec_auditor_intel": "intel",
+            "sec_auditor_vet": "vet",
+            "sec_auditor_rank": "rank",
+            "sec_policy_enforcer": "core",
+            "enforcer": "core",
+            "sec_sanitizer": "sanitizer",
+        }
+        return aliases.get(r, r)
+
+    @staticmethod
+    def normalize_category(category: str) -> str:
+        c = (category or "").strip().lower().replace("-", "_").replace(" ", "_")
+        aliases = {
+            "event": "events",
+            "finding": "findings",
+            "decision": "decisions",
+            "debug": "dev_debug",
+            "dev": "dev_debug",
+        }
+        c = aliases.get(c, c)
+        if c not in CATEGORIES:
+            raise ValueError(f"unknown category '{category}'; expected one of {CATEGORIES}")
+        return c
+
+    def check_perm(self, role: str, category: str, action: str) -> None:
+        role_n = self.normalize_role(role)
+        cat = self.normalize_category(category)
+        allowed = ROLE_ACL[cat].get(action) or ()
+        if role_n not in allowed:
+            raise PermissionError(
+                f"role '{role_n}' cannot {action} on category '{cat}'. "
+                f"allowed={list(allowed)}"
+            )
+
+    def write(
+        self,
+        *,
+        category: str,
+        role: str,
+        title: str,
+        body: str,
+        kind: str = KIND_RAW,
+        tags: Optional[Iterable[str]] = None,
+        meta: Optional[Dict[str, Any]] = None,
+        author: Optional[str] = None,
+        supersede_id: Optional[str] = None,
+    ) -> Entry:
+        role_n = self.normalize_role(role)
+        cat = self.normalize_category(category)
+        kind_n = (kind or KIND_RAW).strip().lower()
+        if kind_n not in {KIND_RAW, KIND_SUMMARY, KIND_REWRITE}:
+            raise ValueError(f"invalid kind '{kind}'")
+
+        # ACL
+        if kind_n in {KIND_SUMMARY, KIND_REWRITE}:
+            self.check_perm(role_n, cat, "summarize")
+        else:
+            self.check_perm(role_n, cat, "write")
+        # Sandbox pipeline policy (SCOUT_BLACKBOARD_SANDBOX_WRITERS): when set,
+        # only the configured roles may write raw events.
+        if (
+            self.sandbox_writers is not None
+            and cat == "events"
+            and kind_n == KIND_RAW
+            and role_n not in self.sandbox_writers
+        ):
+            raise PermissionError(
+                f"role '{role_n}' is not in sandbox_writers for raw "
+                f"event writes: {sorted(self.sandbox_writers)}"
+            )
+
+        now = time.time()
+        entry_id = uuid.uuid4().hex
+        host = socket.gethostname()
+        tag_list = [str(t).strip() for t in (tags or []) if str(t).strip()]
+        meta_d = dict(meta or {})
+        author_n = (author or role_n).strip()
+
+        with self._lock, self._conn() as conn:
+            if supersede_id:
+                # Only the manager, or the role that wrote the entry, may retire it:
+                # otherwise one auditor could silently hide another's finding.
+                row = conn.execute(
+                    "SELECT role FROM entries WHERE id=? AND category=?", (supersede_id, cat)
+                ).fetchone()
+                if row is None:
+                    raise ValueError(f"supersede target '{supersede_id}' not found in '{cat}'")
+                if role_n != "manager" and row["role"] != role_n:
+                    raise PermissionError(
+                        f"role '{role_n}' cannot supersede an entry written by '{row['role']}'"
+                    )
+                conn.execute(
+                    "UPDATE entries SET active=0, superseded_by=?, updated_at=? WHERE id=? AND category=?",
+                    (entry_id, now, supersede_id, cat),
+                )
+            conn.execute(
+                """
+                INSERT INTO entries(
+                    id, category, kind, role, author, host, title, body, tags, meta,
+                    created_at, updated_at, superseded_by, active
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NULL,1)
+                """,
+                (
+                    entry_id,
+                    cat,
+                    kind_n,
+                    role_n,
+                    author_n,
+                    host,
+                    (title or "").strip()[:200] or "(untitled)",
+                    (body or "").strip(),
+                    json.dumps(tag_list),
+                    json.dumps(meta_d),
+                    now,
+                    now,
+                ),
+            )
+        return self.get(entry_id)  # type: ignore[return-value]
+
+    def get(self, entry_id: str) -> Optional[Entry]:
+        with self._lock, self._conn() as conn:
+            row = conn.execute("SELECT * FROM entries WHERE id=?", (entry_id,)).fetchone()
+        return self._row_to_entry(row) if row else None
+
+    def read(
+        self,
+        *,
+        category: str,
+        role: str,
+        limit: int = 20,
+        active_only: bool = True,
+        kind: Optional[str] = None,
+        tag: Optional[str] = None,
+        query: Optional[str] = None,
+        since: Optional[float] = None,
+    ) -> List[Entry]:
+        role_n = self.normalize_role(role)
+        cat = self.normalize_category(category)
+        self.check_perm(role_n, cat, "read")
+        limit = max(1, min(int(limit or 20), 200))
+
+        clauses = ["category=?"]
+        params: List[Any] = [cat]
+        if active_only:
+            clauses.append("active=1")
+        if kind:
+            clauses.append("kind=?")
+            params.append(kind.strip().lower())
+        if since is not None:
+            clauses.append("created_at>=?")
+            params.append(float(since))
+        if query:
+            clauses.append("(title LIKE ? OR body LIKE ? OR tags LIKE ?)")
+            q = f"%{query.strip()}%"
+            params.extend([q, q, q])
+        if tag:
+            clauses.append("tags LIKE ?")
+            params.append(f"%{tag.strip()}%")
+
+        sql = (
+            f"SELECT * FROM entries WHERE {' AND '.join(clauses)} "
+            f"ORDER BY created_at DESC LIMIT ?"
+        )
+        params.append(limit)
+        with self._lock, self._conn() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return [self._row_to_entry(r) for r in rows]
+
+    def snapshot(
+        self,
+        *,
+        role: str,
+        categories: Optional[Sequence[str]] = None,
+        limit_per_category: int = 15,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        cats = list(categories) if categories else list(CATEGORIES)
+        out: Dict[str, List[Dict[str, Any]]] = {}
+        for cat in cats:
+            try:
+                entries = self.read(
+                    category=cat, role=role, limit=limit_per_category, active_only=True
+                )
+            except PermissionError:
+                continue
+            out[cat] = [e.to_dict() for e in entries]
+        return out
+
+    def stats(self) -> Dict[str, Any]:
+        with self._lock, self._conn() as conn:
+            rows = conn.execute(
+                "SELECT category, kind, COUNT(*) AS n, SUM(active) AS active_n "
+                "FROM entries GROUP BY category, kind"
+            ).fetchall()
+        return {
+            "db_path": str(self.db_path),
+            "host": socket.gethostname(),
+            "mode": "memory" if self.memory else "file",
+            "sandbox_writers": (
+                sorted(self.sandbox_writers) if self.sandbox_writers is not None else None
+            ),
+            "counts": [dict(r) for r in rows],
+        }
+
+    @staticmethod
+    def _row_to_entry(row: sqlite3.Row) -> Entry:
+        return Entry(
+            id=row["id"],
+            category=row["category"],
+            kind=row["kind"],
+            role=row["role"],
+            author=row["author"],
+            host=row["host"],
+            title=row["title"],
+            body=row["body"],
+            tags=json.loads(row["tags"] or "[]"),
+            meta=json.loads(row["meta"] or "{}"),
+            created_at=float(row["created_at"]),
+            updated_at=float(row["updated_at"]),
+            superseded_by=row["superseded_by"],
+            active=int(row["active"]),
+        )

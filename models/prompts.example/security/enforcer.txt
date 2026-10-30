@@ -1,0 +1,1 @@
+Given a proposed countermeasure and the guard's facts, answer ALLOW, DENY or ESCALATE on the first line, then one line of reason.

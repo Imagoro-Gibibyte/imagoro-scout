@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "rules": [
+    {
+      "id": "chat_template_tokens",
+      "pattern": "<\\|[a-z_]{2,32}\\|>",
+      "policies": ["strict", "evidence"],
+      "roles": ["user", "tool", "assistant"],
+      "action": "deny",
+      "severity": "high",
+      "why": "Qwen/ChatML control tokens (<|im_start|>, <|im_end|>, <|endoftext|>) in third-party text can forge turns if the engine tokenizes them as specials. The suite's collectors neutralize them; reaching the gate means something upstream failed, so refuse."
+    },
+    {
+      "id": "qwen_tool_tags",
+      "pattern": "</?(tool_call|tool_response)>",
+      "policies": ["strict"],
+      "roles": ["user", "tool"],
+      "action": "deny",
+      "severity": "medium",
+      "why": "Qwen3 tool-call markup typed by a user or returned by a tool can fake a tool exchange."
+    },
+    {
+      "id": "override_phrases",
+      "pattern": "(?i)\\b(ignore|disregard|forget|override)\\b.{0,30}\\b(previous|prior|above|earlier|all|your)\\b.{0,20}\\b(instructions?|rules|prompts?|guidelines)\\b",
+      "policies": ["strict"],
+      "roles": ["user", "tool"],
+      "action": "deny",
+      "severity": "high",
+      "why": "Classic instruction override in interactive or tool text. Not applied to evidence: the security crew must see and flag it."
+    },
+    {
+      "id": "role_reassignment",
+      "pattern": "(?i)\\byou are now\\b|\\bact as (an? )?(admin|root|developer|system|unrestricted)\\b|\\b(developer|jailbreak|dan) mode\\b",
+      "policies": ["strict"],
+      "roles": ["user", "tool"],
+      "action": "deny",
+      "severity": "medium",
+      "why": "Persona/role reassignment attempts."
+    },
+    {
+      "id": "system_prompt_probe",
+      "pattern": "(?i)\\b(reveal|print|show|repeat|leak)\\b.{0,30}\\b(system prompt|hidden instructions|your instructions)\\b",
+      "policies": ["strict"],
+      "roles": ["user"],
+      "action": "log",
+      "severity": "low",
+      "why": "Prompt extraction probes are common and usually harmless; record them, don't block."
+    },
+    {
+      "id": "evidence_override_marker",
+      "pattern": "(?i)\\b(mark|classify|label|treat|report)\\b.{0,30}\\b(benign|safe|allowed|harmless|false positive)\\b",
+      "policies": ["evidence"],
+      "roles": ["user", "tool"],
+      "action": "log",
+      "severity": "medium",
+      "why": "Evidence telling the analyst what verdict to give. The model must judge it (contract test), so only log it for correlation."
+    }
+  ]
+}

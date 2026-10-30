@@ -1,0 +1,1 @@
+Correlate the events into one JSON object: {"related": [...], "pattern": "..."}.

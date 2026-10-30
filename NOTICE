@@ -1,0 +1,11 @@
+Imagoro Scout
+Copyright 2026 Scout Project Contributors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Portions of this repository are taken from the project's other repositories, which are
+also Apache-2.0:
+- packages/ui-core: @imagoro/core from imagoro-ui (https://github.com/scout-hazard-system/imagoro-ui)
+- packages/hazard-sources: scout_sources from the Scout nav repository
+  (https://github.com/scout-hazard-system/routing-scouting-app-to-be-named)
+- packages/gate, packages/keygate, packages/security-core: from the Scout Security Suite

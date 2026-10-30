@@ -1,0 +1,1 @@
+Decide whether a hazard needs an immediate driver alert; answer ALERT or HOLD, then one line.

@@ -1,0 +1,1 @@
+Rank the findings by risk. Answer JSON: {"ranked": [ids], "top_id": "..."}. Never invent ids.

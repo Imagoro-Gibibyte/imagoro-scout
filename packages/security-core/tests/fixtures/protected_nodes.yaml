@@ -1,0 +1,16 @@
+# Test registry. Made-up private ranges (not any real network); the real registry is
+# deployment config and never lives in this repo.
+trusted_networks:
+  - 10.20.0.0/16
+  - 192.168.50.0/24
+nodes:
+  - name: hub
+    ips: [192.168.50.10, 10.20.0.1]
+    macs: ["aa:bb:cc:00:00:01"]
+    wg_pubkeys: ["HUBPUBKEYexample000000000000000000000000000="]
+  - name: agent-box
+    ips: [192.168.50.12, 10.20.2.2]
+  - name: workstation
+    ips: [192.168.50.13, 10.20.2.4]
+  - name: router
+    ips: [192.168.50.1]

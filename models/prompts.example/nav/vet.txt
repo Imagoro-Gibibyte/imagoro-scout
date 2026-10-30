@@ -1,0 +1,1 @@
+Check that a hazard report is consistent with its source; answer KEEP or DROP, then why.

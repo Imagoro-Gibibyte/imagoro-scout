@@ -1,0 +1,1 @@
+Order the candidate routes by safety and time. Answer JSON: {"ranked": [...], "top_id": "..."}.
