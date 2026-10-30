@@ -1,6 +1,6 @@
 # What's published, and how it stays safe
 
-This repo is public; the lab it describes isn't. Code is ported from private repos, so the line is explicit and checked by machine. The step-by-step procedure for update entries and package syncs, for people and agents alike, is in [AGENTS.md](../AGENTS.md).
+This repo is public; the lab it describes isn't, for obvious reasons. Code is ported from private repos, so the line is explicit. The step-by-step procedure for update entries and package syncs, for people and agents alike, is in [AGENTS.md](../AGENTS.md).
 
 ## In
 
@@ -25,11 +25,11 @@ Test fixtures use documentation ranges (`203.0.113.x`, `198.51.100.x`) or made-u
 `tools/leakcheck.py` runs in CI on every push and fails on:
 
 - specific private, CGNAT or mesh host addresses (network constants like `10.0.0.0/8` are fine);
-- lab host, account and network names. They're stored as SHA-256 hashes, so the check itself doesn't publish them. More can be listed locally in the git-ignored `tools/leakcheck.names`;
+- lab host, account and network names. They're stored as SHA-256 hashes, so the check itself doesn't publish them.
 - personal paths;
 - key and token shapes: keygate/vLLM keys, private-key blocks, WireGuard keys, GitHub/cloud tokens.
 
-`tools/new_update.py` drafts update entries from PRs and commits. It drops PR URLs, trailers and commit hashes, and refuses to write a draft that leakcheck flags. Entries are then rewritten by hand as prose.
+`tools/new_update.py` drafts update entries from PRs and commits. It drops PR URLs, trailers and commit hashes, and refuses to write a draft that leakcheck flags. Entries are then rewritten by hand.
 
 ## Checklist before pushing
 
