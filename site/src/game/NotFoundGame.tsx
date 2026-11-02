@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DEFAULT_SEA } from "../effects/seas";
-import { PELLETS, SPREAD_DEG, slatLanes, spawnInterval, targetSpeed } from "./rules";
+import { PELLETS, slatLanes, spawnInterval, spreadRadius, targetSpeed } from "./rules";
 import { cubeFaces, MUZZLE, PIVOT, SHOTGUN, type Face, type Rgb, type Vec3 } from "./voxels";
 
 const PIXEL = 3; // CSS px per game pixel: the low resolution is the look.
@@ -177,7 +177,7 @@ export function NotFoundGame({ children }: { children: ReactNode }) {
       flash = FLASH_TIME;
       recoil = 1;
       cooldown = SHOT_COOLDOWN;
-      const radius = (SPREAD_DEG / 70) * height;
+      const radius = spreadRadius(height);
       // The first pellet flies true, so a dead-on shot can't miss through bad luck.
       const pellets = Array.from({ length: PELLETS }, (_, i) => {
         const angle = Math.random() * Math.PI * 2;
@@ -346,10 +346,24 @@ export function NotFoundGame({ children }: { children: ReactNode }) {
       }
     }
 
+    function drawCrosshair() {
+      const x = Math.round(aim.x / PIXEL);
+      const y = Math.round(aim.y / PIXEL);
+      const radius = spreadRadius(height) / PIXEL;
+      const steps = Math.ceil(radius * 8);
+      ctx.fillStyle = "#ffffff";
+      for (let i = 0; i < steps; i++) {
+        const angle = (i / steps) * Math.PI * 2;
+        ctx.fillRect(Math.round(x + Math.cos(angle) * radius), Math.round(y + Math.sin(angle) * radius), 1, 1);
+      }
+      ctx.fillRect(x, y, 1, 1);
+    }
+
     function tick(now: number) {
       update(Math.min((now - last) / 1000, 0.05));
       last = now;
       draw();
+      drawCrosshair();
       frame = requestAnimationFrame(tick);
     }
 
