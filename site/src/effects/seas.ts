@@ -73,3 +73,27 @@ export const SEAS: Record<string, MicroSlatsProps> = {
     trail: 4
   }
 };
+
+/** Calmer than the routes above, because these pages are mostly reading. Any other route uses this too. */
+export const DEFAULT_SEA: MicroSlatsProps = {
+  backgroundColor: "#000000",
+  color: "#075c5b",
+  cursorSize: 20,
+  cursorStrength: 2,
+  fog: 0.2,
+  gap: 3,
+  glint: 0,
+  interactive: true,
+  lean: 1,
+  preset: "tide",
+  roundness: 1,
+  slatHeight: 52,
+  slatWidth: 2,
+  speed: 0.5,
+  trail: 4
+};
+
+SEAS["/skills"] = { ...DEFAULT_SEA, gap: 2, preset: "swell", speed: 0.8 };
+SEAS["/devlog"] = { ...DEFAULT_SEA, gap: 5, slatHeight: 38 };
+SEAS["/contact"] = { ...DEFAULT_SEA, preset: "signal", speed: 0.8 };
+SEAS["/term"] = { ...DEFAULT_SEA, speed: 0.3 };
