@@ -14,9 +14,9 @@ export function spawnInterval(score: number): number {
   return Math.max(MIN_SPAWN, BASE_SPAWN * Math.exp(-GROWTH * score));
 }
 
-/** From the engine's shotgun_light projectile. */
+/** Pellet count is the engine's shotgun_light. Its 6.5 degree spread is tightened for this game. */
 export const PELLETS = 7;
-export const SPREAD_DEG = 6.5;
+export const SPREAD_DEG = 2.5;
 
 /** Centre of each slat row between two heights, using the same grid as MicroSlats' layout. */
 export function slatLanes(height: number, top: number, bottom: number, sea: MicroSlatsProps): number[] {
