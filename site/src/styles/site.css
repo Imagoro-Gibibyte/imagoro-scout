@@ -462,3 +462,59 @@
 .pf-devlog-project {
   color: var(--project);
 }
+
+/* React Bits effects. The ASCII boxes stay small because the filter rebuilds the
+   whole character grid every frame, so cost tracks area. */
+
+.pf-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.pf-brand-ascii {
+  display: block;
+  width: 320px;
+  height: 72px;
+}
+
+.pf-ascii-hero {
+  width: min(640px, 100%);
+  aspect-ratio: 640 / 84;
+  margin-bottom: var(--spacing-l);
+  opacity: 0.9;
+}
+
+/* Fixed behind the scrolling shell, and it ignores the pointer so the page keeps
+   its own cursor and focus behaviour. */
+.pf-sea {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: #000000;
+}
+
+.pf-shell > *:not(.pf-sea) {
+  z-index: 1;
+}
+
+@media (max-width: 720px) {
+  .pf-brand-ascii {
+    width: 200px;
+    height: 48px;
+  }
+}
+
+/* Keeps page text readable over the backdrop's bright bands. */
+.pf-shell:has(.pf-sea) .pf-main {
+  text-shadow: 0 0 2px #000000, 0 0 8px #000000, 0 0 16px #000000;
+}
+
+.pf-shell:has(.pf-sea) .pf-sub {
+  color: var(--text-body);
+}

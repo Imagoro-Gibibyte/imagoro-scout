@@ -9,3 +9,8 @@ also Apache-2.0:
 - packages/hazard-sources: scout_sources from the Scout nav repository
   (https://github.com/scout-hazard-system/routing-scouting-app-to-be-named)
 - packages/gate, packages/keygate, packages/security-core: from the Scout Security Suite
+
+site/src/effects: ASCIIText and MicroSlats are adapted from React Bits
+(https://github.com/DavidHDev/react-bits), Copyright (c) David Haz, under the MIT +
+Commons Clause terms in site/src/effects/LICENSE-react-bits.md, not Apache-2.0. They are
+included as part of the website and may not be resold or redistributed on their own.
