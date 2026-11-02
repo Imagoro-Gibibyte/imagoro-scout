@@ -10,7 +10,7 @@ const ASCII_CELL = 4;
 const ASCII_PLANE = 16;
 const HERO_PLANE_WIDTH = 170; // Shrinks long titles so they aren't clipped.
 
-const reducedMotion =
+export const reducedMotion =
   typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** No WebGL, or a chunk that failed to load, leaves the page as it is without the effect. */

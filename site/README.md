@@ -34,6 +34,13 @@ work on any static host that honours it. The router is in `src/router.tsx`.
 visitors who prefer reduced motion or whose browser can't run WebGL. Backdrops are set
 per route in `src/effects/seas.ts`, and a route without one uses `DEFAULT_SEA`.
 
+## Not-found game
+
+Unknown routes open a shooting gallery in `src/game/`, built from the voxel engine's
+shotgun. `shotgun.json` comes from the engine's `shotgun_light.vox.json`. Difficulty is in
+`rules.ts`, and targets follow the same grid as the backdrop's slats, using `DEFAULT_SEA`.
+Visitors who prefer reduced motion get the plain not-found page.
+
 ## Devlog
 
 `catalog/devlog.json` holds the entries, and each one names a project from the list at

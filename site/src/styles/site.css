@@ -518,3 +518,46 @@
 .pf-shell:has(.pf-sea) .pf-sub {
   color: var(--text-body);
 }
+
+/* Not-found minigame. The canvas is low resolution and scaled up without smoothing,
+   and fills the viewport so targets can share the backdrop's coordinates. */
+
+.pf-shell:has(.pf-game) .pf-footer {
+  display: none;
+}
+
+.pf-game-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  cursor: crosshair;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+.pf-game-hud {
+  position: relative;
+  pointer-events: none;
+}
+
+.pf-game-hud a {
+  pointer-events: auto;
+}
+
+.pf-game-score {
+  color: var(--text-strong);
+  font-size: 34px;
+  font-weight: 700;
+  margin: 0 0 var(--spacing-m);
+}
+
+.pf-game-score .pf-muted {
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.pf-game-prompt {
+  color: var(--chip-warn);
+  font-weight: 700;
+}
