@@ -16,7 +16,13 @@ export function spawnInterval(score: number): number {
 
 /** Pellet count is the engine's shotgun_light. Its 6.5 degree spread is tightened for this game. */
 export const PELLETS = 7;
-export const SPREAD_DEG = 2.5;
+const SPREAD_DEG = 2.5;
+const VIEW_DEG = 70;
+
+/** Screen radius of the pellet cone. The crosshair draws this too, so it shows the real spread. */
+export function spreadRadius(viewportHeight: number): number {
+  return (SPREAD_DEG / VIEW_DEG) * viewportHeight;
+}
 
 /** Centre of each slat row between two heights, using the same grid as MicroSlats' layout. */
 export function slatLanes(height: number, top: number, bottom: number, sea: MicroSlatsProps): number[] {
