@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { nav, repoUrl, site } from "./content";
 import { NotFound, PageView, pageFor } from "./pages";
 import { Link, useRoute } from "./router";
+import { SkillsPage } from "./skills";
 
 // xterm is ~500 kB, and most visits never open the terminal, so it loads on
 // demand instead of shipping in the landing-page bundle.
@@ -30,9 +31,12 @@ export function Shell() {
   const route = useRoute();
   const page = pageFor(route);
   const isTerminal = route === "/term";
+  const isSkills = route === "/skills";
 
   const title = isTerminal
     ? `Terminal · ${site.title}`
+    : isSkills
+      ? `Skills & Tools · ${site.title}`
     : page
       ? page.route === "/"
         ? site.title
@@ -60,6 +64,8 @@ export function Shell() {
           <Suspense fallback={<p className="pf-muted">Loading terminal…</p>}>
             <TerminalPage />
           </Suspense>
+        ) : isSkills ? (
+          <SkillsPage />
         ) : page ? (
           <PageView page={page} />
         ) : (

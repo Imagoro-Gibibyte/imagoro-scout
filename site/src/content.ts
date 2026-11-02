@@ -31,6 +31,7 @@ export const nav: readonly NavItem[] = [
   { label: "How it works", route: "/services" },
   { label: "Architecture", route: "/insights" },
   { label: "About", route: "/about" },
+  { label: "Skills & Tools", route: "/skills" },
   { label: "Terminal", route: "/term" },
   { label: "Contact", route: "/contact" }
 ];

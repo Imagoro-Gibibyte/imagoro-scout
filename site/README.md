@@ -1,7 +1,7 @@
 # Site
 
 The public portfolio, and the browser terminal that ships with it, as one
-static build. Vite + React; no server, no runtime backend.
+static build. Vite + React. The only runtime backend is the optional download counter.
 
 ```sh
 npm ci
@@ -18,11 +18,32 @@ npm run preview
 | `/services` | How the loop runs, and which tier each part runs on |
 | `/insights` | The request path and the client-side safety model |
 | `/about` | What the system is, the trust boundaries, licensing |
+| `/skills` | Marketplace of downloadable skills and tools |
 | `/term` | The browser terminal |
 | `/contact` | Source and issues |
 
 `public/_redirects` rewrites every unmatched path to `index.html`, so deep links
 work on any static host that honours it. The router is in `src/router.tsx`.
+
+## Skills and tools
+
+`catalog/skills.json` lists the entries, and `skills/<id>/` holds each entry's files.
+`scripts/pack-skills.mjs` zips those into `public/downloads/` during the build, so the
+downloads are always built from reviewed source.
+
+The page works as a static site. Download and share counts come from the Pages Functions
+in `functions/`, which need a D1 binding named `DB` and a `SKILL_SALT` secret:
+
+```sql
+CREATE TABLE skill_events (
+  skill TEXT NOT NULL, kind TEXT NOT NULL, visitor TEXT NOT NULL, day TEXT NOT NULL,
+  PRIMARY KEY (skill, kind, visitor, day)
+) WITHOUT ROWID;
+```
+
+Each visitor counts once per entry, action and day. `visitor` is a salted hash that
+changes daily, so no IP address is stored. Without the binding, downloads still work and
+the counts show as 0.
 
 ## The terminal
 
