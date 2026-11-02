@@ -26,6 +26,14 @@ npm run preview
 `public/_redirects` rewrites every unmatched path to `index.html`, so deep links
 work on any static host that honours it. The router is in `src/router.tsx`.
 
+## Effects
+
+`src/effects/` holds the animated backdrops and ASCII titles, adapted from
+[React Bits](https://reactbits.dev), which keeps its own license
+(`src/effects/LICENSE-react-bits.md`). They load after the page, and are skipped for
+visitors who prefer reduced motion or whose browser can't run WebGL. Backdrops are set
+per route in `src/effects/seas.ts`.
+
 ## Devlog
 
 `catalog/devlog.json` holds the entries, and each one names a project from the list at
