@@ -1,0 +1,125 @@
+{
+  "projects": [
+    { "id": "imagoro", "name": "Imagoro", "color": "#4f8cff" },
+    { "id": "security", "name": "Scout Security", "color": "#f87171" },
+    { "id": "nav", "name": "Scout Nav", "color": "#34d399" },
+    { "id": "lab", "name": "Lab & Serving", "color": "#fbbf24" },
+    { "id": "voxel", "name": "Voxel Engine", "color": "#c084fc" }
+  ],
+  "entries": [
+    {
+      "date": "2026-11-02",
+      "project": "imagoro",
+      "title": "A marketplace for skills and tools",
+      "body": "The site gained a Skills & Tools page with search, filters and rankings. Vault Memory is the first entry: an MCP server and agent skill that give agents a shared Obsidian notebook."
+    },
+    {
+      "date": "2026-10-31",
+      "project": "imagoro",
+      "title": "Kao survives losing its engine",
+      "body": "If the heavy model goes down, Kao drops to a smaller local model and returns on its own once the engine is back. Only outages fail over. A refusal from the gate stays a refusal, so failing over can't be used to get around the content rules."
+    },
+    {
+      "date": "2026-10-31",
+      "project": "lab",
+      "title": "Every model path goes through a gate",
+      "body": "All of Kao's engine traffic now passes through the gate, including the fallback route, so it follows the same rules as the primary one. Key auth also reached the last open engine, and model digests are still verified through the gates."
+    },
+    {
+      "date": "2026-10-30",
+      "project": "imagoro",
+      "title": "The console gets prompts and a security view",
+      "body": "The Harness Console can now send prompts through the gate under its own key, and it shows the Security Suite's decisions and findings. That view is read-only and its text is treated as untrusted. Controls stay in the Security Console."
+    },
+    {
+      "date": "2026-10-30",
+      "project": "lab",
+      "title": "A watchdog for the inference engine",
+      "body": "A small watchdog now checks the engine and its gate, and repairs only the part that failed. It never restarts something stopped on purpose, and it gives up after three repairs in an hour rather than fighting a problem that needs a person."
+    },
+    {
+      "date": "2026-10-30",
+      "project": "imagoro",
+      "title": "One site, one build",
+      "body": "The portfolio and the browser terminal now ship as a single build on imagoro.net. The terminal loads on demand, so most visitors never download it."
+    },
+    {
+      "date": "2026-10-30",
+      "project": "voxel",
+      "title": "Back to planets",
+      "body": "With the overhaul merged, work is returning to planetary rendering and lasting destruction. The next goal is a stress test: render a planet, hit it with a scripted projectile, and keep the damage."
+    },
+    {
+      "date": "2026-10-29",
+      "project": "security",
+      "title": "Readable logs, and a clean cold start",
+      "body": "The suite's records now appear as readable notes, rendered every 15 minutes. The whole lab also came back on its own after a full power-down."
+    },
+    {
+      "date": "2026-10-28",
+      "project": "lab",
+      "title": "vLLM on an RDNA 4 card, under WSL",
+      "body": "The heavy tier now runs Qwen3-8B-AWQ on vLLM, on a Radeon RX 9060 XT inside WSL2. Getting there took a card-specific container and a bridge for AMD's WSL tooling. It's only reachable through a keyed gate."
+    },
+    {
+      "date": "2026-10-28",
+      "project": "lab",
+      "title": "Keys instead of IP lists",
+      "body": "Engines moved to loopback behind a gate with per-client keys and model lists. Addresses change, so they were never a good identity. Heavy models also moved off the small agent box and onto the workstation's 16 GB card."
+    },
+    {
+      "date": "2026-10-28",
+      "project": "security",
+      "title": "The gate learns to tell evidence from attacks",
+      "body": "The gate went from a scaffold to a working proxy with client keys, model allowlists and content rules. A security tool has to read hostile text as evidence without following it, so the rules separate the two."
+    },
+    {
+      "date": "2026-10-28",
+      "project": "security",
+      "title": "Reasoning off has to mean off",
+      "body": "About one security cycle in six was failing with an empty model response. The crew framework was replacing the system message that turned reasoning off, so the setting never reached the model."
+    },
+    {
+      "date": "2026-10-27",
+      "project": "security",
+      "title": "The suite can act, behind four locks",
+      "body": "An operator console signs every request, and a guarded executor needs four independent locks before it will apply a countermeasure. Evals now show a model is good enough before it's trusted."
+    },
+    {
+      "date": "2026-10-27",
+      "project": "security",
+      "title": "The security suite goes live",
+      "body": "The lab now audits itself. Collectors post redacted events to a shared blackboard, and every 30 minutes a crew of eight local models turns them into findings and a decision."
+    },
+    {
+      "date": "2026-10-19",
+      "project": "voxel",
+      "title": "The engine overhaul lands",
+      "body": "A twelve-phase overhaul merged, bringing the planetary code and lasting destruction into the main line along with a single unified UI."
+    },
+    {
+      "date": "2026-10-16",
+      "project": "voxel",
+      "title": "A determinism bug, bisected",
+      "body": "Stress runs were giving different fingerprints, and it looked like load. It was a real bug: animation poses were feeding the simulation's eye, and so the shot origin. With view state kept out of the simulation, the fingerprint matches at any frame rate."
+    },
+    {
+      "date": "2026-10-16",
+      "project": "imagoro",
+      "title": "The UI foundations",
+      "body": "The UI ecosystem reached its M6 milestone: a block spec, a React renderer with 12 block families, a node canvas, a desktop shell, and an access matrix shared with the server."
+    },
+    {
+      "date": "2026-10-16",
+      "project": "nav",
+      "title": "Hazards without coordinates",
+      "body": "Clients no longer send GPS. They ask for coarse map cells of about 40 by 20 km, and the hub refuses coordinates by default. Hazard data comes from weather, work zone and traffic feeds, and each event is signed."
+    },
+    {
+      "date": "2026-10-09",
+      "project": "imagoro",
+      "title": "A terminal in the browser",
+      "body": "The browser terminal began as an xterm UI with a demo mode that needs no backend, so anyone can try it without reaching a real machine."
+    }
+  ]
+}

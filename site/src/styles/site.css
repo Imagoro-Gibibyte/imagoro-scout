@@ -401,3 +401,64 @@
   cursor: pointer;
   font: inherit;
 }
+
+/* Devlog */
+
+.pf-footer-links {
+  display: flex;
+  gap: var(--spacing-m);
+}
+
+.pf-devlog-chip {
+  background: var(--chip-bg);
+  border: 1px solid var(--project);
+  border-radius: 999px;
+  color: var(--project);
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 12px;
+}
+
+.pf-devlog-chip[aria-pressed="true"] {
+  background: var(--project);
+  color: var(--bg);
+}
+
+.pf-devlog {
+  list-style: none;
+  margin: var(--spacing-l) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--layout-card-gap);
+}
+
+.pf-devlog-entry {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--project);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-l);
+}
+
+.pf-devlog-entry h2 {
+  color: var(--text-strong);
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--spacing-s);
+}
+
+.pf-devlog-entry p:last-child {
+  margin: 0;
+}
+
+.pf-devlog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-m);
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0 0 var(--spacing-s);
+}
+
+.pf-devlog-project {
+  color: var(--project);
+}

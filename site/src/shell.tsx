@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { nav, repoUrl, site } from "./content";
+import { DevlogPage } from "./devlog";
 import { NotFound, PageView, pageFor } from "./pages";
 import { Link, useRoute } from "./router";
 import { SkillsPage } from "./skills";
@@ -32,11 +33,14 @@ export function Shell() {
   const page = pageFor(route);
   const isTerminal = route === "/term";
   const isSkills = route === "/skills";
+  const isDevlog = route === "/devlog";
 
   const title = isTerminal
     ? `Terminal · ${site.title}`
     : isSkills
       ? `Skills & Tools · ${site.title}`
+    : isDevlog
+      ? `Devlog · ${site.title}`
     : page
       ? page.route === "/"
         ? site.title
@@ -66,6 +70,8 @@ export function Shell() {
           </Suspense>
         ) : isSkills ? (
           <SkillsPage />
+        ) : isDevlog ? (
+          <DevlogPage />
         ) : page ? (
           <PageView page={page} />
         ) : (
@@ -75,11 +81,16 @@ export function Shell() {
 
       <footer className="pf-footer">
         <span className="pf-muted">{site.tagline}</span>
-        {repoUrl ? (
-          <a className="pf-nav-link" href={repoUrl} rel="noreferrer noopener" target="_blank">
-            Source
-          </a>
-        ) : null}
+        <div className="pf-footer-links">
+          <Link className="pf-nav-link" to="/devlog" aria-current={isDevlog ? "page" : undefined}>
+            Devlog
+          </Link>
+          {repoUrl ? (
+            <a className="pf-nav-link" href={repoUrl} rel="noreferrer noopener" target="_blank">
+              Source
+            </a>
+          ) : null}
+        </div>
       </footer>
     </div>
   );
