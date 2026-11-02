@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, type ReactNode } from "react";
-import { SEAS } from "./seas";
+import { DEFAULT_SEA, SEAS } from "./seas";
 
 // three and ogl are large and purely decorative, so they load after the page does.
 const ASCIIText = lazy(() => import("./ASCIIText.jsx"));
@@ -35,10 +35,9 @@ function Effect({ fallback = null, children }: { fallback?: ReactNode; children:
   );
 }
 
-/** Fixed behind the page. Most routes have none. */
+/** Fixed behind the page, on every route. */
 export function SeaBackdrop({ route }: { route: string }) {
-  const sea = SEAS[route];
-  if (!sea) return null;
+  const sea = SEAS[route] ?? DEFAULT_SEA;
   return (
     <Effect>
       <div aria-hidden="true" className="pf-sea">

@@ -32,7 +32,7 @@ work on any static host that honours it. The router is in `src/router.tsx`.
 [React Bits](https://reactbits.dev), which keeps its own license
 (`src/effects/LICENSE-react-bits.md`). They load after the page, and are skipped for
 visitors who prefer reduced motion or whose browser can't run WebGL. Backdrops are set
-per route in `src/effects/seas.ts`.
+per route in `src/effects/seas.ts`, and a route without one uses `DEFAULT_SEA`.
 
 ## Devlog
 
