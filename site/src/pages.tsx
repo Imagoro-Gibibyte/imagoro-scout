@@ -1,5 +1,9 @@
+import { lazy, Suspense } from "react";
 import { findPage, type Page, type Section } from "./content";
+import { reducedMotion } from "./effects";
 import { Link } from "./router";
+
+const NotFoundGame = lazy(() => import("./game/NotFoundGame").then((module) => ({ default: module.NotFoundGame })));
 
 function CtaLink({ label, href }: { label: string; href: string }) {
   const internal = href.startsWith("/");
@@ -101,9 +105,9 @@ export function PageView({ page }: { page: Page }) {
   );
 }
 
-export function NotFound({ route }: { route: string }) {
+function NotFoundText({ route }: { route: string }) {
   return (
-    <article className="pf-page">
+    <>
       <header className="pf-page-head">
         <h1>Not found</h1>
         <p className="pf-sub">No page matches {route}.</p>
@@ -111,8 +115,24 @@ export function NotFound({ route }: { route: string }) {
       <p className="pf-muted">
         Published pages:{" "}
         <Link to="/">/</Link>, <Link to="/services">/services</Link>, <Link to="/insights">/insights</Link>,{" "}
-        <Link to="/about">/about</Link>, <Link to="/skills">/skills</Link>, <Link to="/devlog">/devlog</Link>, <Link to="/term">/term</Link>, <Link to="/contact">/contact</Link>
+        <Link to="/about">/about</Link>, <Link to="/skills">/skills</Link>, <Link to="/devlog">/devlog</Link>,{" "}
+        <Link to="/term">/term</Link>, <Link to="/contact">/contact</Link>
       </p>
+    </>
+  );
+}
+
+export function NotFound({ route }: { route: string }) {
+  const text = <NotFoundText route={route} />;
+  return (
+    <article className="pf-page">
+      {reducedMotion ? (
+        text
+      ) : (
+        <Suspense fallback={text}>
+          <NotFoundGame>{text}</NotFoundGame>
+        </Suspense>
+      )}
     </article>
   );
 }
