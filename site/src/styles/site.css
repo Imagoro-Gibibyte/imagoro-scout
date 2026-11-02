@@ -311,3 +311,93 @@
     align-items: flex-start;
   }
 }
+
+/* Skills & Tools marketplace */
+
+.pf-skill-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-s);
+  margin-bottom: var(--spacing-m);
+}
+
+.pf-skill-filters input,
+.pf-skill-filters select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  padding: var(--spacing-s) var(--spacing-m);
+}
+
+.pf-skill-filters input {
+  flex: 1 1 260px;
+}
+
+.pf-skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-s);
+  margin-bottom: var(--spacing-m);
+}
+
+.pf-skill-chip {
+  background: var(--chip-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 12px;
+}
+
+.pf-skill-chip[aria-pressed="true"] {
+  background: var(--accent-primary);
+  border-color: var(--accent);
+  color: var(--text-strong);
+}
+
+.pf-skill {
+  display: flex;
+  flex-direction: column;
+  max-width: 420px;
+}
+
+.pf-skill-kind {
+  color: var(--teal);
+  font-size: 12px;
+  margin-bottom: var(--spacing-s);
+}
+
+.pf-skill-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0 0 var(--spacing-m);
+  padding: 0;
+}
+
+.pf-skill-labels li {
+  background: var(--bg-raised);
+  border-radius: var(--radius-sm);
+  color: var(--panel-title);
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.pf-skill-meta {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+.pf-skill .pf-cta-links {
+  margin-top: auto;
+  padding-top: var(--spacing-m);
+}
+
+.pf-skill button.pf-btn {
+  cursor: pointer;
+  font: inherit;
+}

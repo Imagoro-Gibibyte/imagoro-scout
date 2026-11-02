@@ -111,7 +111,7 @@ export function NotFound({ route }: { route: string }) {
       <p className="pf-muted">
         Published pages:{" "}
         <Link to="/">/</Link>, <Link to="/services">/services</Link>, <Link to="/insights">/insights</Link>,{" "}
-        <Link to="/about">/about</Link>, <Link to="/term">/term</Link>, <Link to="/contact">/contact</Link>
+        <Link to="/about">/about</Link>, <Link to="/skills">/skills</Link>, <Link to="/term">/term</Link>, <Link to="/contact">/contact</Link>
       </p>
     </article>
   );
