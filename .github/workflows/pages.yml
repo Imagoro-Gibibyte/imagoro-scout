@@ -51,5 +51,5 @@ jobs:
           # Run from site/, because wrangler looks for functions/ in the working directory.
           # From the repo root it would upload the static files and silently drop the API.
           workingDirectory: site
-          wranglerVersion: "4"
+          wranglerVersion: "4.156.2"
           command: pages deploy dist --project-name=${{ vars.PAGES_PROJECT }}
