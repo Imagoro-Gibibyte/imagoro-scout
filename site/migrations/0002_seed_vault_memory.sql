@@ -2,7 +2,7 @@
 INSERT INTO posts (id, slug, title, summary, body, skill, author, created_at, updated_at) VALUES (
   'seed-vault-memory',
   'vault-memory',
-  'Vault Memory 1.1: plugin, headless setup and archive sorting',
+  'Vault Memory 1.2: plugin, headless setup and archive sorting',
   'Give agents a shared memory in a plain Markdown vault, with or without Obsidian running.',
   '## What it is
 

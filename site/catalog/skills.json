@@ -7,7 +7,7 @@
       "kind": "Skill + MCP server + Obsidian plugin",
       "summary": "Gives agents read and write access to an Obsidian vault, a skill telling them to check it before starting work, and a plugin that sets the vault up and archives old notes.",
       "labels": ["memory", "mcp", "obsidian"],
-      "version": "1.1.0",
+      "version": "1.2.0",
       "published": "2026-11-02",
       "license": "Apache-2.0",
       "contents": ["SKILL.md", "obsidian_mcp_server.py", "README.md", "LICENSE", "plugin/main.js", "plugin/manifest.json"]
