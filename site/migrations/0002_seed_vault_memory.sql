@@ -2,7 +2,7 @@
 INSERT INTO posts (id, slug, title, summary, body, skill, author, created_at, updated_at) VALUES (
   'seed-vault-memory',
   'vault-memory',
-  'Vault Memory 1.2: plugin, headless setup and archive sorting',
+  'Memory MCP: plugin, headless setup and archive sorting',
   'Give agents a shared memory in a plain Markdown vault, with or without Obsidian running.',
   '## What it is
 
@@ -42,6 +42,120 @@ It talks MCP over stdio, so normally your MCP client starts it for you. This has
 - **Sort existing notes into archive** groups notes by title, then into two-week date folders. It only copies.
 - Review `Archive/INDEX.md`, which lists each original and its new path.
 - **Apply reviewed archive moves** moves the originals and updates links. Notes edited since copying are left alone.
+
+## Archive base format
+
+The plugin writes `Project Plans/Plans Archive.base` in Obsidian Bases format, so the archive is a sortable table rather than a plain list. The file it creates is:
+
+```yaml
+filters:
+  and:
+    - or:
+        - file.inFolder("Project Plans")
+        - file.inFolder("Archive")
+    - file.ext == "md"
+    - type != "index"
+formulas:
+  age_days: if(created, (today() - date(created)).days, "")
+properties:
+  file.name:
+    displayName: Note
+  project:
+    displayName: Project
+  repo:
+    displayName: Repo
+  type:
+    displayName: Type
+  status:
+    displayName: Status
+  created:
+    displayName: Written
+  modified:
+    displayName: Last modified
+  window:
+    displayName: Window
+  date_source:
+    displayName: Date source
+  formula.age_days:
+    displayName: Age (days)
+views:
+  - type: table
+    name: By project
+    groupBy:
+      property: project
+      direction: ASC
+    order:
+      - file.name
+      - repo
+      - type
+      - status
+      - created
+      - modified
+      - window
+    sort:
+      - property: created
+        direction: DESC
+  - type: table
+    name: By repo
+    groupBy:
+      property: repo
+      direction: ASC
+    order:
+      - file.name
+      - project
+      - type
+      - status
+      - created
+      - modified
+      - date_source
+    sort:
+      - property: created
+        direction: DESC
+  - type: table
+    name: Approved plans
+    filters:
+      and:
+        - status == "approved"
+    order:
+      - file.name
+      - project
+      - repo
+      - created
+      - modified
+      - date_source
+    sort:
+      - property: created
+        direction: ASC
+  - type: table
+    name: Recently modified
+    order:
+      - file.name
+      - project
+      - repo
+      - modified
+      - created
+      - formula.age_days
+    sort:
+      - property: modified
+        direction: DESC
+  - type: table
+    name: Active only
+    filters:
+      and:
+        - status == "active"
+    order:
+      - file.name
+      - project
+      - repo
+      - created
+      - modified
+    sort:
+      - property: project
+        direction: ASC
+```
+
+The posted plugin writes this exact file on first run, so a vault set up by the plugin already has it.
+
 
 The README in the bundle has the full setup, every tool and notes on syncing.',
   'vault-memory',
