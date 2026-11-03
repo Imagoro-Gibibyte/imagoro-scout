@@ -112,12 +112,32 @@ function NotFoundText({ route }: { route: string }) {
         <h1>Not found</h1>
         <p className="pf-sub">No page matches {route}.</p>
       </header>
-      <p className="pf-muted">
-        Published pages:{" "}
-        <Link to="/">/</Link>, <Link to="/services">/services</Link>, <Link to="/insights">/insights</Link>,{" "}
-        <Link to="/about">/about</Link>, <Link to="/skills">/skills</Link>, <Link to="/devlog">/devlog</Link>,{" "}
-        <Link to="/term">/term</Link>, <Link to="/contact">/contact</Link>
-      </p>
+      <div className="pf-cta-links" aria-label="Published pages">
+        <Link to="/" className="pf-btn">
+          home
+        </Link>
+        <Link to="/services" className="pf-btn">
+          /services
+        </Link>
+        <Link to="/insights" className="pf-btn">
+          /insights
+        </Link>
+        <Link to="/about" className="pf-btn">
+          /about
+        </Link>
+        <Link to="/skills" className="pf-btn">
+          /skills
+        </Link>
+        <Link to="/devlog" className="pf-btn">
+          /devlog
+        </Link>
+        <Link to="/term" className="pf-btn">
+          /term
+        </Link>
+        <Link to="/contact" className="pf-btn">
+          /contact
+        </Link>
+      </div>
     </>
   );
 }

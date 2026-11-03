@@ -1,8 +1,8 @@
 import type { MicroSlatsProps } from "../effects/MicroSlats.jsx";
 
 /** Both curves use this rate, so a run stops being survivable within about 15 hits. */
-const GROWTH = 0.5;
-const BASE_SPEED = 140; // CSS px/s
+const GROWTH = 0.4;
+const BASE_SPEED = 100; // CSS px/s
 const BASE_SPAWN = 1.6; // seconds between targets
 const MIN_SPAWN = 1 / 60;
 
