@@ -1,0 +1,16 @@
+{
+  "labels": ["memory", "security", "coding", "mcp", "obsidian"],
+  "entries": [
+    {
+      "id": "vault-memory",
+      "name": "Vault Memory",
+      "kind": "Skill + MCP server",
+      "summary": "Gives agents read and write access to an Obsidian vault, and a skill telling them to check it before starting work.",
+      "labels": ["memory", "mcp", "obsidian"],
+      "version": "1.0.0",
+      "published": "2026-11-02",
+      "license": "Apache-2.0",
+      "contents": ["SKILL.md", "obsidian_mcp_server.py", "README.md", "LICENSE"]
+    }
+  ]
+}

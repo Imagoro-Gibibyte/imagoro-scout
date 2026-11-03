@@ -1,5 +1,9 @@
+import { lazy, Suspense } from "react";
 import { findPage, type Page, type Section } from "./content";
+import { reducedMotion } from "./effects";
 import { Link } from "./router";
+
+const NotFoundGame = lazy(() => import("./game/NotFoundGame").then((module) => ({ default: module.NotFoundGame })));
 
 function CtaLink({ label, href }: { label: string; href: string }) {
   const internal = href.startsWith("/");
@@ -101,18 +105,54 @@ export function PageView({ page }: { page: Page }) {
   );
 }
 
-export function NotFound({ route }: { route: string }) {
+function NotFoundText({ route }: { route: string }) {
   return (
-    <article className="pf-page">
+    <>
       <header className="pf-page-head">
         <h1>Not found</h1>
         <p className="pf-sub">No page matches {route}.</p>
       </header>
-      <p className="pf-muted">
-        Published pages:{" "}
-        <Link to="/">/</Link>, <Link to="/services">/services</Link>, <Link to="/insights">/insights</Link>,{" "}
-        <Link to="/about">/about</Link>, <Link to="/term">/term</Link>, <Link to="/contact">/contact</Link>
-      </p>
+      <div className="pf-cta-links" aria-label="Published pages">
+        <Link to="/" className="pf-btn">
+          home
+        </Link>
+        <Link to="/services" className="pf-btn">
+          /services
+        </Link>
+        <Link to="/insights" className="pf-btn">
+          /insights
+        </Link>
+        <Link to="/about" className="pf-btn">
+          /about
+        </Link>
+        <Link to="/skills" className="pf-btn">
+          /skills
+        </Link>
+        <Link to="/devlog" className="pf-btn">
+          /devlog
+        </Link>
+        <Link to="/term" className="pf-btn">
+          /term
+        </Link>
+        <Link to="/contact" className="pf-btn">
+          /contact
+        </Link>
+      </div>
+    </>
+  );
+}
+
+export function NotFound({ route }: { route: string }) {
+  const text = <NotFoundText route={route} />;
+  return (
+    <article className="pf-page">
+      {reducedMotion ? (
+        text
+      ) : (
+        <Suspense fallback={text}>
+          <NotFoundGame>{text}</NotFoundGame>
+        </Suspense>
+      )}
     </article>
   );
 }
