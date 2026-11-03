@@ -6,7 +6,7 @@ INSERT INTO posts (id, slug, title, summary, body, skill, author, created_at, up
   'Give agents a shared memory in a plain Markdown vault, with or without Obsidian running.',
   '## What it is
 
-Vault Memory gives AI agents a memory they share with you: an [Obsidian](https://obsidian.md) vault of plain Markdown notes. [Download the bundle](/skills#vault-memory) from Skills & Tools.
+Memory MCP gives AI agents a memory they share with you: an [Obsidian](https://obsidian.md) vault of plain Markdown notes. [Download the bundle](/skills#vault-memory) from Skills & Tools.
 
 - **MCP server:** reads and writes the vault for any MCP client, over stdio.
 - **Skill:** tells agents to check the vault before starting work.
