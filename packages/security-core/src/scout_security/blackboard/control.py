@@ -38,8 +38,13 @@ DEFAULT_STATE = {
     "collect_paused": False,
     "executor_armed": False,  # remote half of the two-key arm; hosts also need SCOUT_SEC_COUNTERMEASURES=enforce
     "run_requested_at": 0.0,
+    # Automatic update audit (operates via shell on the host).
+    "update_audit_enabled": False,
+    "update_audit_allow_sudo": False,
+    "update_audit_auto_push": False,
 }
-BOOL_KEYS = ("crew_paused", "collect_paused", "executor_armed")
+BOOL_KEYS = ("crew_paused", "collect_paused", "executor_armed",
+             "update_audit_enabled", "update_audit_allow_sudo", "update_audit_auto_push")
 
 # Retention (seconds) per category; proposals kept 30 days after their last change.
 RETENTION = {
