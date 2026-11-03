@@ -311,3 +311,253 @@
     align-items: flex-start;
   }
 }
+
+/* Skills & Tools marketplace */
+
+.pf-skill-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-s);
+  margin-bottom: var(--spacing-m);
+}
+
+.pf-skill-filters input,
+.pf-skill-filters select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  padding: var(--spacing-s) var(--spacing-m);
+}
+
+.pf-skill-filters input {
+  flex: 1 1 260px;
+}
+
+.pf-skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-s);
+  margin-bottom: var(--spacing-m);
+}
+
+.pf-skill-chip {
+  background: var(--chip-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 12px;
+}
+
+.pf-skill-chip[aria-pressed="true"] {
+  background: var(--accent-primary);
+  border-color: var(--accent);
+  color: var(--text-strong);
+}
+
+.pf-skill {
+  display: flex;
+  flex-direction: column;
+  max-width: 420px;
+}
+
+.pf-skill-kind {
+  color: var(--teal);
+  font-size: 12px;
+  margin-bottom: var(--spacing-s);
+}
+
+.pf-skill-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0 0 var(--spacing-m);
+  padding: 0;
+}
+
+.pf-skill-labels li {
+  background: var(--bg-raised);
+  border-radius: var(--radius-sm);
+  color: var(--panel-title);
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.pf-skill-meta {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+.pf-skill .pf-cta-links {
+  margin-top: auto;
+  padding-top: var(--spacing-m);
+}
+
+.pf-skill button.pf-btn {
+  cursor: pointer;
+  font: inherit;
+}
+
+/* Devlog */
+
+.pf-footer-links {
+  display: flex;
+  gap: var(--spacing-m);
+}
+
+.pf-devlog-chip {
+  background: var(--chip-bg);
+  border: 1px solid var(--project);
+  border-radius: 999px;
+  color: var(--project);
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 12px;
+}
+
+.pf-devlog-chip[aria-pressed="true"] {
+  background: var(--project);
+  color: var(--bg);
+}
+
+.pf-devlog {
+  list-style: none;
+  margin: var(--spacing-l) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--layout-card-gap);
+}
+
+.pf-devlog-entry {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--project);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-l);
+}
+
+.pf-devlog-entry h2 {
+  color: var(--text-strong);
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--spacing-s);
+}
+
+.pf-devlog-entry p:last-child {
+  margin: 0;
+}
+
+.pf-devlog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-m);
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0 0 var(--spacing-s);
+}
+
+.pf-devlog-project {
+  color: var(--project);
+}
+
+/* React Bits effects. The ASCII boxes stay small because the filter rebuilds the
+   whole character grid every frame, so cost tracks area. */
+
+.pf-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.pf-brand-ascii {
+  display: block;
+  width: 320px;
+  height: 72px;
+}
+
+.pf-ascii-hero {
+  width: min(640px, 100%);
+  aspect-ratio: 640 / 84;
+  margin-bottom: var(--spacing-l);
+  opacity: 0.9;
+}
+
+/* Fixed behind the scrolling shell, and it ignores the pointer so the page keeps
+   its own cursor and focus behaviour. */
+.pf-sea {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: #000000;
+}
+
+.pf-shell > *:not(.pf-sea) {
+  z-index: 1;
+}
+
+@media (max-width: 720px) {
+  .pf-brand-ascii {
+    width: 200px;
+    height: 48px;
+  }
+}
+
+/* Keeps page text readable over the backdrop's bright bands. */
+.pf-shell:has(.pf-sea) .pf-main {
+  text-shadow: 0 0 2px #000000, 0 0 8px #000000, 0 0 16px #000000;
+}
+
+.pf-shell:has(.pf-sea) .pf-sub {
+  color: var(--text-body);
+}
+
+/* Not-found minigame. The canvas is low resolution and scaled up without smoothing,
+   and fills the viewport so targets can share the backdrop's coordinates. */
+
+.pf-shell:has(.pf-game) .pf-footer {
+  display: none;
+}
+
+.pf-game-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  cursor: none;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+.pf-game-hud {
+  position: relative;
+  pointer-events: none;
+}
+
+.pf-game-hud a {
+  pointer-events: auto;
+}
+
+.pf-game-score {
+  color: var(--text-strong);
+  font-size: 34px;
+  font-weight: 700;
+  margin: 0 0 var(--spacing-m);
+}
+
+.pf-game-score .pf-muted {
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+}
+
+.pf-game-prompt {
+  color: var(--chip-warn);
+  font-weight: 700;
+}

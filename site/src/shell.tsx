@@ -1,7 +1,10 @@
 import { lazy, Suspense, useEffect } from "react";
 import { nav, repoUrl, site } from "./content";
+import { DevlogPage } from "./devlog";
+import { AsciiBrand, AsciiHero, SeaBackdrop } from "./effects";
 import { NotFound, PageView, pageFor } from "./pages";
 import { Link, useRoute } from "./router";
+import { SkillsPage } from "./skills";
 
 // xterm is ~500 kB, and most visits never open the terminal, so it loads on
 // demand instead of shipping in the landing-page bundle.
@@ -30,14 +33,22 @@ export function Shell() {
   const route = useRoute();
   const page = pageFor(route);
   const isTerminal = route === "/term";
+  const isSkills = route === "/skills";
+  const isDevlog = route === "/devlog";
 
   const title = isTerminal
     ? `Terminal · ${site.title}`
+    : isSkills
+      ? `Skills & Tools · ${site.title}`
+    : isDevlog
+      ? `Devlog · ${site.title}`
     : page
       ? page.route === "/"
         ? site.title
         : `${page.title} · ${site.title}`
       : `Not found · ${site.title}`;
+
+  const heroText = isSkills ? "Skills" : isDevlog ? "Devlog" : page && page.route !== "/" ? page.title : null;
 
   useEffect(() => {
     document.title = title;
@@ -45,21 +56,34 @@ export function Shell() {
 
   return (
     <div className={isTerminal ? "pf-shell pf-shell-term" : "pf-shell"}>
+      <SeaBackdrop route={route} />
       <header className="pf-header">
         <Link className="pf-brand" to="/">
-          <span aria-hidden="true" className="pf-brand-mark">
-            ◇
-          </span>
-          <span className="pf-brand-name">{site.title}</span>
+          <AsciiBrand
+            text={site.title}
+            fallback={
+              <>
+                <span aria-hidden="true" className="pf-brand-mark">
+                  ◇
+                </span>
+                <span className="pf-brand-name">{site.title}</span>
+              </>
+            }
+          />
         </Link>
         <Nav route={route} />
       </header>
 
       <main className={isTerminal ? "pf-main pf-main-term" : "pf-main"}>
+        {heroText ? <AsciiHero text={heroText} /> : null}
         {isTerminal ? (
           <Suspense fallback={<p className="pf-muted">Loading terminal…</p>}>
             <TerminalPage />
           </Suspense>
+        ) : isSkills ? (
+          <SkillsPage />
+        ) : isDevlog ? (
+          <DevlogPage />
         ) : page ? (
           <PageView page={page} />
         ) : (
@@ -69,11 +93,16 @@ export function Shell() {
 
       <footer className="pf-footer">
         <span className="pf-muted">{site.tagline}</span>
-        {repoUrl ? (
-          <a className="pf-nav-link" href={repoUrl} rel="noreferrer noopener" target="_blank">
-            Source
-          </a>
-        ) : null}
+        <div className="pf-footer-links">
+          <Link className="pf-nav-link" to="/devlog" aria-current={isDevlog ? "page" : undefined}>
+            Devlog
+          </Link>
+          {repoUrl ? (
+            <a className="pf-nav-link" href={repoUrl} rel="noreferrer noopener" target="_blank">
+              Source
+            </a>
+          ) : null}
+        </div>
       </footer>
     </div>
   );
