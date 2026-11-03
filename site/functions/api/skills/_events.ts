@@ -10,7 +10,7 @@ export function isEntry(id: unknown): id is string {
 }
 
 /** A hash that changes daily: it dedupes repeat clicks without storing an IP address. */
-async function visitor(request: Request, day: string, salt: string): Promise<string> {
+export async function visitor(request: Request, day: string, salt: string): Promise<string> {
   const ip = request.headers.get("CF-Connecting-IP") ?? "";
   const data = new TextEncoder().encode(`${ip}|${day}|${salt}`);
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", data));

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import catalog from "../catalog/skills.json";
+import { PostList, SUBMIT_ROUTE } from "./posts";
+import { Link } from "./router";
 
 interface Entry {
   id: string;
@@ -177,6 +179,16 @@ export function SkillsPage() {
       ) : (
         <p className="pf-muted">Nothing matches those filters.</p>
       )}
+
+      <section className="pf-skill-posts" aria-label="Posts">
+        <h2>Posts</h2>
+        <PostList />
+        <p>
+          <Link className="pf-btn" to={SUBMIT_ROUTE}>
+            Submit a post
+          </Link>
+        </p>
+      </section>
     </article>
   );
 }

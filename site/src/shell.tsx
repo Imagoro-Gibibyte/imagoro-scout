@@ -3,6 +3,7 @@ import { nav, repoUrl, site } from "./content";
 import { DevlogPage } from "./devlog";
 import { AsciiBrand, AsciiHero, SeaBackdrop } from "./effects";
 import { NotFound, PageView, pageFor } from "./pages";
+import { POSTS_ROUTE, PostPage, SUBMIT_ROUTE, SubmitPage } from "./posts";
 import { Link, useRoute } from "./router";
 import { SkillsPage } from "./skills";
 
@@ -35,10 +36,12 @@ export function Shell() {
   const isTerminal = route === "/term";
   const isSkills = route === "/skills";
   const isDevlog = route === "/devlog";
+  const isSubmit = route === SUBMIT_ROUTE;
+  const postSlug = !isSubmit && route.startsWith(`${POSTS_ROUTE}/`) ? route.slice(POSTS_ROUTE.length + 1) : null;
 
   const title = isTerminal
     ? `Terminal · ${site.title}`
-    : isSkills
+    : isSkills || isSubmit || postSlug
       ? `Skills & Tools · ${site.title}`
     : isDevlog
       ? `Devlog · ${site.title}`
@@ -48,7 +51,7 @@ export function Shell() {
         : `${page.title} · ${site.title}`
       : `Not found · ${site.title}`;
 
-  const heroText = isSkills ? "Skills" : isDevlog ? "Devlog" : page && page.route !== "/" ? page.title : null;
+  const heroText = isSkills || isSubmit ? "Skills" : isDevlog ? "Devlog" : page && page.route !== "/" ? page.title : null;
 
   useEffect(() => {
     document.title = title;
@@ -82,6 +85,10 @@ export function Shell() {
           </Suspense>
         ) : isSkills ? (
           <SkillsPage />
+        ) : isSubmit ? (
+          <SubmitPage />
+        ) : postSlug ? (
+          <PostPage slug={postSlug} />
         ) : isDevlog ? (
           <DevlogPage />
         ) : page ? (
