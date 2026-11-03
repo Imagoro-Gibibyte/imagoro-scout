@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import catalog from "../catalog/skills.json";
-import { PostList, SUBMIT_ROUTE } from "./posts";
+import type { Post } from "./posts";
+import { SUBMIT_ROUTE } from "./posts";
 import { Link } from "./router";
 
 interface Entry {
@@ -34,12 +35,14 @@ type Sort = keyof typeof SORTS;
 const entries: readonly Entry[] = catalog.entries;
 const DAY_MS = 86_400_000;
 
-function SkillCard({ entry, stats, onShare }: { entry: Entry; stats: Stats; onShare: (entry: Entry) => void }) {
+function SkillCard({ entry, stats, onShare, postSlug }: { entry: Entry; stats: Stats; onShare: (entry: Entry) => void; postSlug?: string }) {
   const counts = stats[entry.id];
   return (
     <li className="pf-card pf-skill" id={entry.id}>
       <span className="pf-skill-kind">{entry.kind}</span>
-      <h3>{entry.name}</h3>
+      <h3>
+        {postSlug ? <Link to={`/skills/posts/${postSlug}`}>{entry.name}</Link> : entry.name}
+      </h3>
       <p>{entry.summary}</p>
       <ul className="pf-skill-labels">
         {entry.labels.map((label) => (
@@ -70,6 +73,7 @@ export function SkillsPage() {
   const [ageDays, setAgeDays] = useState(0);
   const [sort, setSort] = useState<Sort>("downloads");
   const [stats, setStats] = useState<Stats>({});
+  const [posts, setPosts] = useState<readonly Post[]>([]);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -78,6 +82,10 @@ export function SkillsPage() {
       .then(setStats)
       .catch(() => undefined);
     // Cards render after the browser's own jump to a shared link's #id.
+    fetch("/api/posts")
+      .then((res) => (res.ok ? (res.json() as Promise<Post[]>) : []))
+      .then(setPosts)
+      .catch(() => undefined);
     document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
   }, []);
 
@@ -101,6 +109,8 @@ export function SkillsPage() {
         return count(b, sort) - count(a, sort) || age(a) - age(b);
       });
   }, [query, labels, ageDays, sort, stats]);
+
+  const postBySkill = useMemo(() => Object.fromEntries(posts.filter((post) => post.skill).map((post) => [post.skill!, post.slug])), [posts]);
 
   function toggleLabel(label: string) {
     setLabels((current) => (current.includes(label) ? current.filter((l) => l !== label) : [...current, label]));
@@ -173,22 +183,18 @@ export function SkillsPage() {
       {shown.length > 0 ? (
         <ul className="pf-cards">
           {shown.map((entry) => (
-            <SkillCard key={entry.id} entry={entry} stats={stats} onShare={(e) => void share(e)} />
+            <SkillCard key={entry.id} entry={entry} stats={stats} onShare={(e) => void share(e)} postSlug={postBySkill[entry.id]} />
           ))}
         </ul>
       ) : (
         <p className="pf-muted">Nothing matches those filters.</p>
       )}
 
-      <section className="pf-skill-posts" aria-label="Posts">
-        <h2>Posts</h2>
-        <PostList />
-        <p>
-          <Link className="pf-btn" to={SUBMIT_ROUTE}>
-            Submit a post
-          </Link>
-        </p>
-      </section>
+      <p>
+        <Link className="pf-btn" to={SUBMIT_ROUTE}>
+          Submit a post
+        </Link>
+      </p>
     </article>
   );
 }
