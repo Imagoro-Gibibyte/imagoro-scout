@@ -1,0 +1,7 @@
+{
+  "endpoint": "https://YOUR-SITE.example/api/devlog",
+  "origin": "https://YOUR-SITE.example",
+  "projects": ["project-a", "project-b"],
+  "author_default": "agent",
+  "admin_token_env": "DEVLOG_ADMIN_TOKEN"
+}
