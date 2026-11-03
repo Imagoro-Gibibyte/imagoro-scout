@@ -24,6 +24,8 @@ export const SUBMIT_ROUTE = "/skills/posts/new";
 
 function inline(part: Inline, key: number): ReactNode {
   if (part.kind === "text") return part.text;
+  if (part.kind === "bold") return <strong key={key}>{part.text}</strong>;
+  if (part.kind === "code") return <code key={key}>{part.text}</code>;
   const internal = part.href.startsWith("/");
   return internal ? (
     <Link key={key} to={part.href}>
@@ -42,6 +44,22 @@ function PostBody({ post }: { post: Post }) {
       {parseBody(post.body).map((block, i) => {
         if (block.kind === "heading") return <h2 key={i}>{block.text}</h2>;
         if (block.kind === "paragraph") return <p key={i}>{block.parts.map(inline)}</p>;
+        if (block.kind === "code") {
+          return (
+            <pre key={i} className="pf-post-code">
+              <code>{block.text}</code>
+            </pre>
+          );
+        }
+        if (block.kind === "list") {
+          return (
+            <ul key={i}>
+              {block.items.map((parts, item) => (
+                <li key={item}>{parts.map(inline)}</li>
+              ))}
+            </ul>
+          );
+        }
         const src = post.images[block.position];
         return src ? <img key={i} className="pf-post-image" src={src} alt={block.alt} loading="lazy" /> : null;
       })}
@@ -190,8 +208,10 @@ export function SubmitPage() {
           <textarea name="body" required rows={14} maxLength={20000} />
         </label>
         <p className="pf-muted">
-          Start a line with <code>## </code> for a heading. Links are <code>[text](https://example.com)</code>. Place
-          an attached image with <code>![description](image:1)</code>, on its own line.
+          Start a line with <code>## </code> for a heading and <code>- </code> for a list. Links are{" "}
+          <code>[text](https://example.com)</code>. Use <code>**bold**</code> and <code>`code`</code>, or put longer
+          code between lines of <code>```</code>. Place an attached image
+          with <code>![description](image:1)</code>, on its own line.
         </p>
         <label>
           Images (up to 4, 1 MB each)
