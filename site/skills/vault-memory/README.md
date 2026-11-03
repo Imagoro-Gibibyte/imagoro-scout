@@ -26,11 +26,13 @@ The skill expects these paths, relative to the vault. Edit `SKILL.md` if your va
 
 ## Setup
 
-Both ways need Python 3.10+ and the MCP SDK (tested with `mcp` 1.28.1):
+Both ways need Python 3.10+ and version 1 of the MCP SDK (tested with `mcp` 1.28.1 and 1.30.0):
 
 ```sh
-pip install mcp
+pip install "mcp<2"
 ```
+
+Keep the version limit. `mcp` 2 removed an import the server uses, so with a plain `pip install mcp` it stops with `No module named 'mcp.server.fastmcp'`.
 
 ### With the plugin
 
@@ -73,13 +75,32 @@ Copy `SKILL.md` into your agent's skills folder, inside a folder named `vault-me
 
 ### Headless
 
-On a machine with no desktop, skip the plugin and start the server directly:
+The server doesn't use Obsidian at all. A vault is just a folder of Markdown files, so you can run this on a server or any machine with no desktop, and the folder can be new and empty:
+
+1. Unzip the bundle anywhere.
+2. Install the MCP SDK, as above.
+3. Create a folder for the vault. Add the layout above if you're using the skill.
+4. Register the server with your MCP client, as in [Without the plugin](#without-the-plugin).
+
+To check it by hand:
 
 ```sh
 OBSIDIAN_VAULT=/path/to/vault python obsidian_mcp_server.py
 ```
 
-It talks MCP over stdio, so it waits for a client rather than printing anything. Started this way, it initializes, lists its tools and answers `vault_info`.
+It talks MCP over stdio, so it waits for a client rather than printing anything. Press Ctrl+C to stop it. Normally your MCP client starts it for you.
+
+The bundle has been tested this way on Windows, on a local NTFS drive: unzipped into a new folder with a fresh Python environment, then driven by an MCP client through every tool.
+
+### Other drives and file systems
+
+The server uses ordinary file reads and writes, so the vault can be any folder Python can read and write. Other file systems and operating systems should work the same way, but they haven't been tested. Some things to watch for:
+
+- **Removable drives:** `OBSIDIAN_VAULT` is a fixed path, so update your client config if the drive letter or mount point changes. If the drive isn't connected, the server won't start.
+- **Network and cloud-synced folders:** each write replaces the whole file, so two machines writing the same note at once can lose one of the writes. Keep one writer per note, or sync as described in [Syncing with SyncGit](#syncing-with-syncgit).
+- **Case-sensitive file systems:** `Notes.md` and `notes.md` are different notes on Linux, but the same note on most Windows and macOS drives. Keep to one spelling if a vault moves between them.
+- **File names:** a note name that's valid on one system can be refused on another. Windows doesn't allow `:` or `?`, for example.
+- **Read-only folders:** reading and searching work, but writing tools return an error.
 
 ## Plugin commands
 
