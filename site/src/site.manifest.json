@@ -175,8 +175,7 @@
           "sub": "Every claim on this site is checkable in the source. Issues are open, and the test suites are what keep it honest.",
           "links": [
             { "label": "This repository", "href": "{REPO}" },
-            { "label": "Open an issue", "href": "{REPO}/issues" },
-            { "label": "Upstream UI framework", "href": "{UI_REPO}" }
+            { "label": "Open an issue", "href": "{REPO}/issues" }
           ]
         }
       ]

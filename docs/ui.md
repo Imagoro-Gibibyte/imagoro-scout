@@ -1,6 +1,6 @@
 # UI ecosystem
 
-[imagoro-ui](https://github.com/scout-hazard-system/imagoro-ui) is one React-first codebase for every Scout front end: a composable **block GUI** plus a **node canvas**, built modularity-first so the same blocks serve a personal dashboard, the Command Center and the desktop consoles. This repo vendors its zero-dependency core as [`packages/ui-core`](../packages/ui-core).
+The upstream UI framework is one React-first codebase for every Scout front end: a composable **block GUI** plus a **node canvas**, built modularity-first so the same blocks serve a personal dashboard, the Command Center and the desktop consoles. This repo vendors its zero-dependency core as [`packages/ui-core`](../packages/ui-core).
 
 ## Layers
 

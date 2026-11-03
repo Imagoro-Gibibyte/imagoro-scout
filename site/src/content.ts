@@ -3,7 +3,7 @@
  *
  * The editable content now lives in `site.manifest.json` (a plain JSON file a
  * designer can change without touching code). This module loads it, resolves the
- * `{REPO}` / `{UI_REPO}` tokens in link hrefs against the build inputs, and
+ * `{REPO}` token in link hrefs against the build inputs, and
  * re-exports the typed shapes the rest of the site consumes.
  *
  * The repository's own URL is a build input (`VITE_REPO_URL`) rather than a
@@ -14,7 +14,6 @@
 import manifest from "./site.manifest.json";
 
 const REPO = (import.meta.env.VITE_REPO_URL ?? "").replace(/\/+$/, "");
-export const UI_REPO = "https://github.com/scout-hazard-system/imagoro-ui";
 
 export const repoUrl: string = REPO;
 
@@ -39,7 +38,7 @@ export interface Page {
 
 function resolveTokens(value: unknown): unknown {
   if (typeof value === "string") {
-    return value.replace(/\{REPO\}/g, REPO).replace(/\{UI_REPO\}/g, UI_REPO);
+    return value.replace(/\{REPO\}/g, REPO);
   }
   if (Array.isArray(value)) {
     return value.map(resolveTokens);
