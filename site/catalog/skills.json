@@ -4,7 +4,9 @@
     "security",
     "coding",
     "mcp",
-    "obsidian"
+    "obsidian",
+    "devlog",
+    "writing"
   ],
   "entries": [
     {
@@ -27,6 +29,25 @@
         "LICENSE",
         "plugin/main.js",
         "plugin/manifest.json"
+      ]
+    },
+    {
+      "id": "devlog-update",
+      "name": "Devlog Update",
+      "kind": "Skill + posting helper",
+      "summary": "Lets an agent draft and submit a devlog entry to imagoro.net after a meaningful change lands. Entries are screened and reviewed before publishing.",
+      "labels": [
+        "devlog",
+        "writing"
+      ],
+      "version": "0.1.0",
+      "published": "2026-11-03",
+      "license": "Apache-2.0",
+      "contents": [
+        "SKILL.md",
+        "devlog_post.py",
+        "README.md",
+        "LICENSE"
       ]
     }
   ]
