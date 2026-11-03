@@ -49,6 +49,47 @@
         "README.md",
         "LICENSE"
       ]
+    },
+    {
+      "id": "devlog-local",
+      "name": "Devlog Local",
+      "kind": "Skill + local logger",
+      "summary": "Keep a private, local change log. No network, no moderation. Appends dated entries to a Markdown file.",
+      "labels": [
+        "devlog",
+        "logging"
+      ],
+      "version": "0.1.0",
+      "published": "2026-11-03",
+      "license": "Apache-2.0",
+      "contents": [
+        "SKILL.md",
+        "devlog_log.py",
+        "README.md",
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "devlog-protocol",
+      "name": "Devlog Protocol",
+      "kind": "Skill + template + client",
+      "summary": "A fill-in-the-blank devlog protocol you adapt to your own site. Includes a config template, a posting client that pulls summaries from READMEs, and setup docs.",
+      "labels": [
+        "devlog",
+        "template",
+        "writing"
+      ],
+      "version": "0.1.0",
+      "published": "2026-11-03",
+      "license": "Apache-2.0",
+      "contents": [
+        "SKILL.md",
+        "devlog_protocol.py",
+        "config.example.json",
+        "SETUP.md",
+        "README.md",
+        "LICENSE"
+      ]
     }
   ]
 }
