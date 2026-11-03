@@ -21,24 +21,7 @@ interface DevlogEntry {
   body: string;
   author?: string;
   published_at?: string | null;
-}
-
-async function encryptToken(token: string, email: string): Promise<string> {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(email), "PBKDF2", false, ["deriveKey"]);
-  const key = await crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("imagoro-post-edit"), iterations: 100000, hash: "SHA-256" },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt"]
-  );
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(token));
-  const out = new Uint8Array(iv.length + ct.byteLength);
-  out.set(iv);
-  out.set(new Uint8Array(ct), iv.length);
-  return btoa(String.fromCharCode(...out));
+  post?: string | null;
 }
 
 interface Rejection {
@@ -139,11 +122,11 @@ export function PostPage({ slug }: { slug: string }) {
   }, [slug]);
 
   useEffect(() => {
-    fetch("/api/devlog")
+    fetch(`/api/devlog?post=${encodeURIComponent(slug)}`)
       .then((res) => (res.ok ? (res.json() as Promise<DevlogEntry[]>) : []))
       .then((data) => setUpdates(Array.isArray(data) ? data : []))
       .catch(() => setUpdates([]));
-  }, []);
+  }, [slug]);
 
   if (post === undefined) return <article className="pf-page" aria-busy="true" />;
   if (post === null) {
@@ -199,14 +182,27 @@ export function PostPage({ slug }: { slug: string }) {
             <h2>Edit post</h2>
             {editStep === "email" ? (
               <form
-                onSubmit={(event) => {
+                onSubmit={async (event) => {
                   event.preventDefault();
                   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(editEmail)) {
                     setEditStatus("Enter a valid email.");
                     return;
                   }
-                  setEditStep("token");
-                  setEditStatus(null);
+                  try {
+                    const res = await fetch(`/api/posts/${encodeURIComponent(slug)}/edit-request`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: editEmail })
+                    });
+                    if (res.ok) {
+                      setEditStep("token");
+                      setEditStatus(null);
+                    } else {
+                      setEditStatus("Could not send token.");
+                    }
+                  } catch {
+                    setEditStatus("Could not send token.");
+                  }
                 }}
               >
                 <label>
@@ -225,10 +221,12 @@ export function PostPage({ slug }: { slug: string }) {
                 onSubmit={async (event) => {
                   event.preventDefault();
                   try {
-                    const ciphertext = await encryptToken(editToken, editEmail);
-                    setEditStatus(`Token accepted (encrypted). ${ciphertext.slice(0, 8)}…`);
+                    const res = await fetch(`/api/posts/${encodeURIComponent(slug)}/edit-verify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: editEmail, token: editToken }) });
+                    const reply = (await res.json()) as { ok?: boolean; reason?: string };
+                    if (reply.ok) setEditStatus("Token verified. You can now edit this post.");
+                    else setEditStatus(reply.reason ?? "Invalid token.");
                   } catch {
-                    setEditStatus("Could not encrypt token.");
+                    setEditStatus("Could not verify token.");
                   }
                   setEditToken("");
                 }}
@@ -237,7 +235,7 @@ export function PostPage({ slug }: { slug: string }) {
                   Token
                   <input type="password" value={editToken} onChange={(e) => setEditToken(e.target.value)} required autoComplete="off" />
                 </label>
-                <p className="pf-muted">The token is encrypted in your browser and is never stored in plaintext.</p>
+                <p className="pf-muted">The token travels over HTTPS and is verified server-side; only its hash is stored, never the plaintext.</p>
                 {editStatus ? <p role="status">{editStatus}</p> : null}
                 <button type="submit" className="pf-btn">Submit</button>{" "}
                 <button type="button" onClick={() => { setEditOpen(false); setEditToken(""); }}>Close</button>

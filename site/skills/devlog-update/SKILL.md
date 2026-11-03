@@ -24,6 +24,7 @@ Fields:
   - why, with evidence (a failure rate, a log symptom, a test that caught it);
   - what it means next.
 - `author`: your name or "agent" (optional).
+- `post`: slug of a post this update links to (optional). When set, the update shows up in that post's "Updates" section.
 
 Numbers need units and a source. Describe roles, not machines.
 

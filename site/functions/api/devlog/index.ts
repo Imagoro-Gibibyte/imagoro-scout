@@ -12,17 +12,19 @@ import {
   type Env
 } from "./_store";
 
-/** GET /api/devlog: published entries, newest first. ?project= narrows. */
+/** GET /api/devlog: published entries, newest first. ?project= and ?post= narrow. */
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   if (!env.DB) {
     // No DB: return empty; the page falls back to the static seed.
     return json([]);
   }
-  const project = new URL(request.url).searchParams.get("project");
+  const url = new URL(request.url);
+  const project = url.searchParams.get("project");
+  const post = url.searchParams.get("post");
   const { results } = await env.DB.prepare(
-    "SELECT * FROM devlog_entries WHERE status = 'published' AND (?1 IS NULL OR project = ?1) ORDER BY date DESC, published_at DESC LIMIT 200"
+    "SELECT * FROM devlog_entries WHERE status = 'published' AND (?1 IS NULL OR project = ?1) AND (?2 IS NULL OR post_slug = ?2) ORDER BY date DESC, published_at DESC LIMIT 200"
   )
-    .bind(project)
+    .bind(project, post)
     .all<DevlogRow>();
   return json(results.map(publicEntry));
 };
@@ -39,12 +41,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     return json({ ok: false, reasons: [{ field: "form", reason: "That's the limit for today. Try again tomorrow." }] }, 429);
   }
 
-  let body: { title?: unknown; body?: unknown; project?: unknown; author?: unknown };
+  let body: { title?: unknown; body?: unknown; project?: unknown; author?: unknown; post?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return rejected([{ field: "form", reason: "The request body couldn't be read." }]);
   }
+
+  const postSlug = String(body.post ?? "").trim().slice(0, 80) || null;
 
   const post = {
     title: String(body.title ?? "").trim(),
@@ -63,8 +67,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const now = new Date().toISOString();
   const date = now.slice(0, 10);
   await env.DB.prepare(
-    "INSERT INTO devlog_entries (id, slug, date, project, title, body, author, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-  ).bind(id, `${slugify(post.title)}-${id.slice(0, 8)}`, date, post.project, post.title, post.body, post.author, now, now).run();
+    "INSERT INTO devlog_entries (id, slug, date, project, title, body, author, created_at, updated_at, post_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).bind(id, `${slugify(post.title)}-${id.slice(0, 8)}`, date, post.project, post.title, post.body, post.author, now, now, postSlug).run();
 
   return json({ ok: true, status: "pending", id }, 202);
 };

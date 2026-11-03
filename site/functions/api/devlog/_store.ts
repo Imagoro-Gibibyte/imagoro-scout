@@ -23,6 +23,7 @@ export interface DevlogRow {
   created_at: string;
   updated_at: string;
   published_at: string | null;
+  post_slug: string | null;
 }
 
 export const DAILY_SUBMISSIONS = 3;
@@ -60,7 +61,8 @@ export function publicEntry(row: DevlogRow) {
     title: row.title,
     body: row.body,
     author: row.author,
-    published_at: row.published_at
+    published_at: row.published_at,
+    post: row.post_slug
   };
 }
 
