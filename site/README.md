@@ -1,7 +1,8 @@
 # Site
 
 The public portfolio, and the browser terminal that ships with it, as one
-static build. Vite + React. The only runtime backend is the optional download counter.
+static build. Vite + React. The runtime backends are the optional download counter and
+the skills-page posts.
 
 ```sh
 npm ci
@@ -19,6 +20,8 @@ npm run preview
 | `/insights` | The request path and the client-side safety model |
 | `/about` | What the system is, the trust boundaries, licensing |
 | `/skills` | Marketplace of downloadable skills and tools |
+| `/skills/posts/new` | Submit a post for review |
+| `/skills/posts/<slug>` | A published post |
 | `/devlog` | Dated project updates, linked from the footer |
 | `/term` | The browser terminal |
 | `/contact` | Source and issues |
@@ -66,6 +69,34 @@ CREATE TABLE skill_events (
 Each visitor counts once per entry, action and day. `visitor` is a salted hash that
 changes daily, so no IP address is stored. Without the binding, downloads still work and
 the counts show as 0.
+
+## Posts
+
+Anyone can submit a post on `/skills/posts/new`. Nothing goes live without an operator's
+approval, and `functions/api/admin/posts/[id]/approve.ts` is the only code that publishes.
+
+1. **Screening** (`functions/api/posts/_screen.ts`) runs on submit. Images get file-type and
+   embedded-content checks, then a Workers AI classifier. Links get structural rules, then a
+   lookup on a resolver that blocks malware. Rejected content gets its reasons back and is
+   never stored. Every check fails closed: if a check can't run, the content is rejected.
+2. **Review** happens in the Site Editor section of the Command Center, in the UI suite. It can
+   edit, approve, reject, or take down a live post. Edited links are screened again.
+
+Bodies are parsed into blocks (`src/post-body.ts`) and never rendered as HTML. Images are
+stored in D1, so they're limited to 1 MB each.
+
+| Binding | Kind | Purpose |
+|---|---|---|
+| `DB` | D1 | Posts, images and daily limits. Apply `migrations/` in order |
+| `AI` | Workers AI | Image classifier. Without it, every image is rejected |
+| `SKILL_SALT` | Secret | Daily visitor hash for the limit of 3 submissions |
+| `POSTS_ADMIN_TOKEN` | Secret | Bearer token for `/api/admin/*`. Without it, that API stays shut |
+| `POSTS_ADMIN_ORIGINS` | Variable | Comma-separated origins allowed to call the admin API |
+
+`migrations/0002_seed_vault_memory.sql` queues the launch post as `pending`, so it needs an
+approval like any other post.
+
+`npm test` runs the real handlers against the real migrations on SQLite.
 
 ## The terminal
 

@@ -561,3 +561,46 @@
   color: var(--chip-warn);
   font-weight: 700;
 }
+
+.pf-skill-posts {
+  margin-top: 40px;
+}
+
+.pf-post-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 16px 0;
+}
+
+.pf-post-form {
+  display: grid;
+  gap: 14px;
+  max-width: 640px;
+}
+
+.pf-post-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.pf-post-form input,
+.pf-post-form select,
+.pf-post-form textarea {
+  font: inherit;
+  color: inherit;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+.pf-post-errors {
+  border-left: 3px solid currentColor;
+  padding-left: 24px;
+}
+
+/* A trap for form-filling bots, so it must stay out of view without being display: none. */
+.pf-post-trap {
+  position: absolute;
+  left: -9999px;
+}
