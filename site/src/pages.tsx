@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { findPage, type Page, type Section } from "./content";
+import { formatAttrs } from "./format";
 import { reducedMotion } from "./effects";
 import { Link } from "./router";
 
@@ -18,21 +19,24 @@ function CtaLink({ label, href }: { label: string; href: string }) {
   );
 }
 
-function SectionView({ section }: { section: Section }) {
+function SectionView({ section, index }: { section: Section; index: number }) {
+  const f = (element: string) => formatAttrs(section.style, index, element);
   switch (section.kind) {
     case "hero":
       return (
-        <section className="pf-section pf-hero">
-          <h1>{section.headline}</h1>
-          <p className="pf-sub">{section.sub}</p>
+        <section className="pf-section pf-hero" {...f("tile")}>
+          <h1 {...f("headline")}>{section.headline}</h1>
+          <p className="pf-sub" {...f("sub")}>
+            {section.sub}
+          </p>
         </section>
       );
 
     case "features":
       return (
-        <section className="pf-section">
-          {section.headline ? <h2>{section.headline}</h2> : null}
-          <ul className="pf-cards">
+        <section className="pf-section" {...f("tile")}>
+          {section.headline ? <h2 {...f("headline")}>{section.headline}</h2> : null}
+          <ul className="pf-cards" {...f("cards")}>
             {section.features.map((feature) => (
               <li className="pf-card" key={feature.title}>
                 <h3>{feature.title}</h3>
@@ -45,11 +49,15 @@ function SectionView({ section }: { section: Section }) {
 
     case "text":
       return (
-        <section className="pf-section">
-          {section.headline ? <h2>{section.headline}</h2> : null}
-          {section.sub ? <p className="pf-sub">{section.sub}</p> : null}
+        <section className="pf-section" {...f("tile")}>
+          {section.headline ? <h2 {...f("headline")}>{section.headline}</h2> : null}
+          {section.sub ? (
+            <p className="pf-sub" {...f("sub")}>
+              {section.sub}
+            </p>
+          ) : null}
           {section.points ? (
-            <ul className="pf-points">
+            <ul className="pf-points" {...f("points")}>
               {section.points.map((point) => (
                 <li key={point}>{point}</li>
               ))}
@@ -60,10 +68,12 @@ function SectionView({ section }: { section: Section }) {
 
     case "flow":
       return (
-        <section className="pf-section">
-          <h2>{section.headline}</h2>
-          <p className="pf-sub">{section.sub}</p>
-          <ol className="pf-flow">
+        <section className="pf-section" {...f("tile")}>
+          <h2 {...f("headline")}>{section.headline}</h2>
+          <p className="pf-sub" {...f("sub")}>
+            {section.sub}
+          </p>
+          <ol className="pf-flow" {...f("steps")}>
             {section.nodes.map((node) => (
               <li className="pf-flow-node" key={node.name}>
                 <span className="pf-flow-name">{node.name}</span>
@@ -76,10 +86,12 @@ function SectionView({ section }: { section: Section }) {
 
     case "cta":
       return (
-        <section className="pf-section">
-          <h2>{section.headline}</h2>
-          <p className="pf-sub">{section.sub}</p>
-          <div className="pf-cta-links">
+        <section className="pf-section" {...f("tile")}>
+          <h2 {...f("headline")}>{section.headline}</h2>
+          <p className="pf-sub" {...f("sub")}>
+            {section.sub}
+          </p>
+          <div className="pf-cta-links" {...f("buttons")}>
             {section.links.map((link) => (
               <CtaLink key={link.href} label={link.label} href={link.href} />
             ))}
@@ -99,7 +111,7 @@ export function PageView({ page }: { page: Page }) {
         </header>
       )}
       {page.sections.map((section, index) => (
-        <SectionView key={index} section={section} />
+        <SectionView key={index} section={section} index={index} />
       ))}
     </article>
   );

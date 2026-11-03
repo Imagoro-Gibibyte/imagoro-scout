@@ -11,6 +11,7 @@
  * without the variable simply renders fewer outbound links.
  */
 
+import type { SectionStyle } from "./format";
 import manifest from "./site.manifest.json";
 
 const REPO = (import.meta.env.VITE_REPO_URL ?? "").replace(/\/+$/, "");
@@ -22,12 +23,13 @@ export interface NavItem {
   route: string;
 }
 
-export type Section =
+export type Section = { style?: SectionStyle } & (
   | { kind: "hero"; headline: string; sub: string }
   | { kind: "features"; headline?: string; features: readonly { title: string; body: string }[] }
   | { kind: "text"; headline?: string; sub?: string; points?: readonly string[] }
   | { kind: "flow"; headline: string; sub: string; nodes: readonly { name: string; body: string }[] }
-  | { kind: "cta"; headline: string; sub: string; links: readonly { label: string; href: string }[] };
+  | { kind: "cta"; headline: string; sub: string; links: readonly { label: string; href: string }[] }
+);
 
 export interface Page {
   route: string;
