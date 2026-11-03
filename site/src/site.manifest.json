@@ -12,6 +12,12 @@
     { "label": "Terminal", "route": "/term" },
     { "label": "Contact", "route": "/contact" }
   ],
+  "footer": {
+    "links": [
+      { "label": "Devlog", "href": "/devlog" },
+      { "label": "Source", "href": "{REPO}" }
+    ]
+  },
   "pages": [
     {
       "route": "/",

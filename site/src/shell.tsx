@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { nav, repoUrl, site } from "./content";
+import { footerLinks, nav, site } from "./content";
 import { DevlogPage } from "./devlog";
 import { AsciiBrand, AsciiHero, SeaBackdrop } from "./effects";
 import { NotFound, PageView, pageFor } from "./pages";
@@ -101,14 +101,17 @@ export function Shell() {
       <footer className="pf-footer">
         <span className="pf-muted">{site.tagline}</span>
         <div className="pf-footer-links">
-          <Link className="pf-nav-link" to="/devlog" aria-current={isDevlog ? "page" : undefined}>
-            Devlog
-          </Link>
-          {repoUrl ? (
-            <a className="pf-nav-link" href={repoUrl} rel="noreferrer noopener" target="_blank">
-              Source
-            </a>
-          ) : null}
+          {footerLinks.map((link) =>
+            link.href.startsWith("/") ? (
+              <Link key={link.href} className="pf-nav-link" to={link.href} aria-current={link.href === route ? "page" : undefined}>
+                {link.label}
+              </Link>
+            ) : (
+              <a key={link.href} className="pf-nav-link" href={link.href} rel="noreferrer noopener" target="_blank">
+                {link.label}
+              </a>
+            )
+          )}
         </div>
       </footer>
     </div>

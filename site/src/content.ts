@@ -56,11 +56,14 @@ function resolveTokens(value: unknown): unknown {
 const resolved = resolveTokens(manifest) as {
   site: { title: string; tagline: string };
   nav: NavItem[];
+  footer?: { links: { label: string; href: string }[] };
   pages: Page[];
 };
 
 export const site = resolved.site;
 export const nav = resolved.nav as readonly NavItem[];
+/** Footer links. A link whose `{REPO}` didn't resolve is left out. */
+export const footerLinks = (resolved.footer?.links ?? []).filter((link) => link.href);
 export const pages = resolved.pages as readonly Page[];
 
 export function findPage(route: string): Page | undefined {
