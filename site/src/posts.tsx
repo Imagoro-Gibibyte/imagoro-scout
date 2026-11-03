@@ -109,10 +109,14 @@ export function PostPage({ slug }: { slug: string }) {
   const [post, setPost] = useState<Post | null | undefined>(undefined);
   const [updates, setUpdates] = useState<DevlogEntry[] | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [editStep, setEditStep] = useState<"email" | "token">("email");
+  const [editStep, setEditStep] = useState<"email" | "token" | "edit">("email");
   const [editEmail, setEditEmail] = useState("");
   const [editToken, setEditToken] = useState("");
   const [editStatus, setEditStatus] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSummary, setEditSummary] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [removeImages, setRemoveImages] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetch(`/api/posts/${encodeURIComponent(slug)}`)
@@ -127,6 +131,13 @@ export function PostPage({ slug }: { slug: string }) {
       .then((data) => setUpdates(Array.isArray(data) ? data : []))
       .catch(() => setUpdates([]));
   }, [slug]);
+
+  useEffect(() => {
+    if (!post) return;
+    setEditTitle(post.title);
+    setEditSummary(post.summary);
+    setEditBody(post.body);
+  }, [post]);
 
   if (post === undefined) return <article className="pf-page" aria-busy="true" />;
   if (post === null) {
@@ -216,19 +227,22 @@ export function PostPage({ slug }: { slug: string }) {
                 <button type="submit" className="pf-btn">Send token</button>{" "}
                 <button type="button" onClick={() => setEditOpen(false)}>Cancel</button>
               </form>
-            ) : (
+            ) : editStep === "token" ? (
               <form
                 onSubmit={async (event) => {
                   event.preventDefault();
                   try {
                     const res = await fetch(`/api/posts/${encodeURIComponent(slug)}/edit-verify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: editEmail, token: editToken }) });
                     const reply = (await res.json()) as { ok?: boolean; reason?: string };
-                    if (reply.ok) setEditStatus("Token verified. You can now edit this post.");
-                    else setEditStatus(reply.reason ?? "Invalid token.");
+                    if (reply.ok) {
+                      setEditStep("edit");
+                      setEditStatus(null);
+                    } else {
+                      setEditStatus(reply.reason ?? "Invalid token.");
+                    }
                   } catch {
                     setEditStatus("Could not verify token.");
                   }
-                  setEditToken("");
                 }}
               >
                 <label>
@@ -238,6 +252,78 @@ export function PostPage({ slug }: { slug: string }) {
                 <p className="pf-muted">The token travels over HTTPS and is verified server-side; only its hash is stored, never the plaintext.</p>
                 {editStatus ? <p role="status">{editStatus}</p> : null}
                 <button type="submit" className="pf-btn">Submit</button>{" "}
+                <button type="button" onClick={() => { setEditOpen(false); setEditToken(""); }}>Close</button>
+              </form>
+            ) : (
+              <form
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  try {
+                    const res = await fetch(`/api/posts/${encodeURIComponent(slug)}/edit-apply`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        email: editEmail,
+                        token: editToken,
+                        title: editTitle,
+                        summary: editSummary,
+                        body: editBody,
+                        removeImages: Array.from(removeImages)
+                      })
+                    });
+                    const reply = (await res.json()) as { ok?: boolean; reason?: string; reasons?: { field: string; reason: string }[] };
+                    if (reply.ok) {
+                      setEditStatus("Post updated.");
+                      setEditToken("");
+                      // refresh the page data
+                      window.location.reload();
+                    } else if (reply.reasons) {
+                      setEditStatus(reply.reasons.map((r) => `${r.field}: ${r.reason}`).join("; "));
+                    } else {
+                      setEditStatus(reply.reason ?? "Update failed.");
+                    }
+                  } catch {
+                    setEditStatus("Could not update post.");
+                  }
+                }}
+              >
+                <label>
+                  Title
+                  <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required maxLength={120} />
+                </label>
+                <label>
+                  Summary
+                  <input value={editSummary} onChange={(e) => setEditSummary(e.target.value)} required maxLength={280} />
+                </label>
+                <label>
+                  Post
+                  <textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} required rows={10} maxLength={20000} />
+                </label>
+                {post && Object.keys(post.images).length > 0 ? (
+                  <fieldset>
+                    <legend>Remove images</legend>
+                    {Object.keys(post.images).map((pos) => (
+                      <label key={pos}>
+                        <input
+                          type="checkbox"
+                          checked={removeImages.has(Number(pos))}
+                          onChange={(e) => {
+                            setRemoveImages((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(Number(pos));
+                              else next.delete(Number(pos));
+                              return next;
+                            });
+                          }}
+                        />
+                        Image {pos}
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : null}
+                <p className="pf-muted">Links are re-screened on save.</p>
+                {editStatus ? <p role="status">{editStatus}</p> : null}
+                <button type="submit" className="pf-btn">Save changes</button>{" "}
                 <button type="button" onClick={() => { setEditOpen(false); setEditToken(""); }}>Close</button>
               </form>
             )}
