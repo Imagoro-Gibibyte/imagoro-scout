@@ -19,6 +19,7 @@ The skill expects these paths, relative to the vault. Edit `SKILL.md` if your va
 | Path | What it's for |
 |---|---|
 | `Project Plans/<Project>/` | Plans and dated `*- status.md` notes |
+| `Project Plans/Plans Archive.base` | Sortable table of every plan and archived note |
 | `Project Plans/_Worktrees/Registry.md` | Maps repos to worktrees |
 | `Project Plans/_Worktrees/Prompts.md` | Suggested next steps |
 | `Imported Local Docs/` | Repo documents copied into the vault |
@@ -120,7 +121,7 @@ The plugin asks before doing anything, and sorting only copies:
 2. Review `Archive/INDEX.md`, which lists each original and its new path. Until you apply, each note exists twice, so search shows both.
 3. **Apply reviewed archive moves** moves each original over its copy and updates links to it. A note edited on either side since copying isn't moved, and is marked `changed`.
 
-A note's date comes from its title, then frontmatter `created`, then the file's modified time. Sorting skips dot folders such as `.obsidian` and `.trash`, the standard folders, anything that isn't Markdown, and files over 25 MB.
+Each copy gets a `YYYY-MM-DD` file name and the properties the plans table displays: `project`, `repo`, `type`, `status`, `created`, `modified`, `window`, `date_source` and `filed_from`. Values a note already has are kept. Windows are fixed 14-day blocks counted from Monday 2026-01-05. A note's date comes from frontmatter `created`, then its title, then the file's modified time. Sorting skips dot folders such as `.obsidian` and `.trash`, the standard folders, anything that isn't Markdown, and files over 25 MB.
 
 ## Tools
 

@@ -93,7 +93,7 @@ var GENERIC_WORDS = /* @__PURE__ */ new Set([
 ]);
 var DAY_MS = 864e5;
 var PERIOD_DAYS = 14;
-var PERIOD_ANCHOR = Date.UTC(2026, 8, 28);
+var PERIOD_ANCHOR = Date.UTC(2026, 0, 5);
 var DATE = /\b(\d{4})-(\d{2})-(\d{2})\b/;
 async function scan(vault) {
   const notes = [];
@@ -161,13 +161,38 @@ function clusterTitles(paths) {
   }
   return slugs;
 }
+var FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
 function noteDate(file, text) {
   const parse = (match) => match ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
-  const fromTitle = parse(DATE.exec(title(file.path)));
-  if (fromTitle !== null) return fromTitle;
-  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? "";
+  const frontmatter = FRONTMATTER.exec(text)?.[1] ?? "";
   const created = /^created:\s*["']?(.+)$/m.exec(frontmatter)?.[1] ?? "";
-  return parse(DATE.exec(created)) ?? file.mtime;
+  const stated = parse(DATE.exec(created)) ?? parse(DATE.exec(title(file.path)));
+  return stated !== null ? { ms: stated, source: "stated" } : { ms: file.mtime, source: "file" };
+}
+function noteType(path) {
+  const name = title(path).toLowerCase();
+  if (/\bstatus\b/.test(name)) return "status-report";
+  if (/\baudit\b|\bfindings\b/.test(name)) return "audit";
+  if (/\b(agents|rules)\b/.test(name)) return "agent-guide";
+  if (/\bbriefing\b/.test(name)) return "briefing";
+  if (/\bplan\b/.test(name)) return "plan";
+  return "note";
+}
+function yamlValue(value) {
+  return /^[\w][\w ./-]*$/.test(value) ? value : JSON.stringify(value);
+}
+function withProperties(text, properties) {
+  const match = FRONTMATTER.exec(text);
+  const existing = match?.[1] ?? "";
+  const has = (key) => new RegExp(`^${key}:`, "m").test(existing);
+  const added = Object.entries(properties).filter(([key]) => !has(key)).map(([key, value]) => `${key}: ${yamlValue(value)}`);
+  const kept = existing.replace(/^window:.*$/m, `window: ${properties.window}`);
+  const block = `---
+${[kept, ...added].filter(Boolean).join("\n")}
+---`;
+  return match ? block + text.slice(match[0].length) : `${block}
+
+${text}`;
 }
 var isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 function periodFolder(ms) {
@@ -183,6 +208,10 @@ async function writeIndex(vault, entries) {
   const cell = (text) => text.replace(/\|/g, "\\|");
   const rows = entries.map((e) => `| ${cell(e.original)} | ${cell(e.copy)} | ${e.status} |`);
   const note = [
+    "---",
+    "type: index",
+    "---",
+    "",
     "# Archive index",
     "",
     "`copied`: the original is still in place. `moved`: the copy replaced it. `changed`: one side was edited after copying, so it wasn't moved. `missing`: the original is gone.",
@@ -202,12 +231,30 @@ async function copyToArchive(vault, plan) {
   const clusters = clusterTitles(pending.map((note) => note.path));
   for (const note of pending) {
     const data = await vault.read(note.path);
-    const folder = `Archive/${clusters.get(note.path)}/${periodFolder(noteDate(note, data.toString("utf8")))}`;
-    const name = title(note.path);
+    const text = data.toString("utf8");
+    const date = noteDate(note, text);
+    const day = isoDay(date.ms);
+    const window = periodFolder(date.ms);
+    const cluster = clusters.get(note.path);
+    const folder = `Archive/${cluster}/${window}`;
+    const name = /^\d{4}-\d{2}-\d{2}\b/.test(title(note.path)) ? title(note.path) : `${day} ${title(note.path)}`;
     let copy = `${folder}/${name}.md`;
     for (let n = 2; await vault.exists(copy); n++) copy = `${folder}/${name} (${n}).md`;
-    await vault.write(copy, data);
-    entries.push({ original: note.path, copy, hash: hash(data), status: "copied" });
+    const archived = Buffer.from(
+      withProperties(text, {
+        project: cluster,
+        repo: "all",
+        type: noteType(note.path),
+        status: "done",
+        created: day,
+        modified: isoDay(note.mtime),
+        window,
+        date_source: date.source,
+        filed_from: note.path
+      })
+    );
+    await vault.write(copy, archived);
+    entries.push({ original: note.path, copy, hash: hash(data), copyHash: hash(archived), status: "copied" });
   }
   await writeIndex(vault, entries);
   return entries;
@@ -221,13 +268,15 @@ async function applyMoves(vault) {
       entry.status = "missing";
       continue;
     }
-    const same = hash(await vault.read(entry.original)) === entry.hash && hash(await vault.read(entry.copy)) === entry.hash;
+    const same = hash(await vault.read(entry.original)) === entry.hash && hash(await vault.read(entry.copy)) === entry.copyHash;
     entry.status = same ? "copied" : "changed";
     if (same) ready.push(entry);
   }
   for (const entry of ready) {
+    const archived = await vault.read(entry.copy);
     await vault.remove(entry.copy);
     await vault.move(entry.original, entry.copy);
+    await vault.write(entry.copy, archived);
     entry.status = "moved";
   }
   await writeIndex(vault, entries);
@@ -301,7 +350,7 @@ function testServer(python, serverPath, vaultPath) {
       params: {
         protocolVersion: "2025-06-18",
         capabilities: {},
-        clientInfo: { name: "vault-memory-plugin", version: "1.1.0" }
+        clientInfo: { name: "vault-memory-plugin", version: "1.2.0" }
       }
     });
   });
@@ -310,11 +359,123 @@ function testServer(python, serverPath, vaultPath) {
 // src/core/setup.ts
 var import_node_fs3 = require("node:fs");
 var import_node_path3 = require("node:path");
+
+// src/core/plans-base.ts
+var PLANS_BASE_PATH = "Project Plans/Plans Archive.base";
+var PLANS_BASE = `filters:
+  and:
+    - or:
+        - file.inFolder("Project Plans")
+        - file.inFolder("Archive")
+    - file.ext == "md"
+    - type != "index"
+formulas:
+  age_days: if(created, (today() - date(created)).days, "")
+properties:
+  file.name:
+    displayName: Note
+  project:
+    displayName: Project
+  repo:
+    displayName: Repo
+  type:
+    displayName: Type
+  status:
+    displayName: Status
+  created:
+    displayName: Written
+  modified:
+    displayName: Last modified
+  window:
+    displayName: Window
+  date_source:
+    displayName: Date source
+  formula.age_days:
+    displayName: Age (days)
+views:
+  - type: table
+    name: By project
+    groupBy:
+      property: project
+      direction: ASC
+    order:
+      - file.name
+      - repo
+      - type
+      - status
+      - created
+      - modified
+      - window
+    sort:
+      - property: created
+        direction: DESC
+  - type: table
+    name: By repo
+    groupBy:
+      property: repo
+      direction: ASC
+    order:
+      - file.name
+      - project
+      - type
+      - status
+      - created
+      - modified
+      - date_source
+    sort:
+      - property: created
+        direction: DESC
+  - type: table
+    name: Approved plans
+    filters:
+      and:
+        - status == "approved"
+    order:
+      - file.name
+      - project
+      - repo
+      - created
+      - modified
+      - date_source
+    sort:
+      - property: created
+        direction: ASC
+  - type: table
+    name: Recently modified
+    order:
+      - file.name
+      - project
+      - repo
+      - modified
+      - created
+      - formula.age_days
+    sort:
+      - property: modified
+        direction: DESC
+  - type: table
+    name: Active only
+    filters:
+      and:
+        - status == "active"
+    order:
+      - file.name
+      - project
+      - repo
+      - created
+      - modified
+    sort:
+      - property: project
+        direction: ASC
+`;
+
+// src/core/setup.ts
 var DEFAULT_VAULT_NAME = "brain";
 var FOLDERS = ["Project Plans", "Project Plans/_Worktrees", "Imported Local Docs", "Archive"];
 var TEMPLATES = {
-  "Project Plans/_Worktrees/Registry.md": "# Worktree Registry\n\nMaps each repo to its worktrees. Git stays the source of truth.\n\n## <repo>\n\n- Path:\n- Branch:\n- Remote:\n",
-  "Project Plans/_Worktrees/Prompts.md": "# Prompts\n\nSuggested next steps for each project.\n\n## <project>\n\n- \n"
+  "Project Plans/_Worktrees/Registry.md": "---\ntype: index\n---\n\n# Worktree Registry\n\nMaps each repo to its worktrees. Git stays the source of truth.\n\n## <repo>\n\n- Path:\n- Branch:\n- Remote:\n",
+  "Project Plans/_Worktrees/Prompts.md": "---\ntype: index\n---\n\n# Prompts\n\nSuggested next steps for each project.\n\n## <project>\n\n- \n",
+  "Project Plans/README.md": "---\ntitle: Project Plans archive\ntype: index\n---\n\n# Project Plans archive\n\n![[Plans Archive.base]]\n",
+  [PLANS_BASE_PATH]: PLANS_BASE
 };
 async function createPrerequisites(vault) {
   const created = [];
