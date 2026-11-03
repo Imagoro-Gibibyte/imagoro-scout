@@ -1,0 +1,7 @@
+name = "imagoro-edit-mailer"
+main = "index.ts"
+compatibility_date = "2026-11-03"
+
+[vars]
+MAIL_FROM = "noreply@imagoro.net"
+RESEND_URL = "https://api.resend.com/emails"
