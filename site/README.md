@@ -82,7 +82,8 @@ approval, and `functions/api/admin/posts/[id]/approve.ts` is the only code that 
 2. **Review** happens in the Site Editor section of the Command Center, in the UI suite. It can
    edit, approve, reject, or take down a live post. Edited links are screened again.
 
-Bodies are parsed into blocks (`src/post-body.ts`) and never rendered as HTML. Images are
+Bodies support headings, lists, links, bold, code and attached images. They're parsed into
+blocks (`src/post-body.ts`) and never rendered as HTML. Images are
 stored in D1, so they're limited to 1 MB each.
 
 | Binding | Kind | Purpose |

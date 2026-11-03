@@ -48,4 +48,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site/dist --project-name=${{ vars.PAGES_PROJECT }}
+          # Run from site/, because wrangler looks for functions/ in the working directory.
+          # From the repo root it would upload the static files and silently drop the API.
+          workingDirectory: site
+          command: pages deploy dist --project-name=${{ vars.PAGES_PROJECT }}

@@ -573,6 +573,14 @@
   margin: 16px 0;
 }
 
+.pf-post-code {
+  overflow-x: auto;
+  padding: 12px 14px;
+  margin: 16px 0;
+  border: 1px solid currentColor;
+  font-size: 13px;
+}
+
 .pf-post-form {
   display: grid;
   gap: 14px;

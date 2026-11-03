@@ -83,6 +83,41 @@ describe("post format", () => {
   });
 });
 
+describe("post format blocks", () => {
+  it("keeps code blocks whole and doesn't read them as markup", () => {
+    const blocks = parseBody("Before\n\n```sh\npip install x\n\n[not](http://a.example)\n```\n\nAfter");
+    expect(blocks).toEqual([
+      { kind: "paragraph", parts: [{ kind: "text", text: "Before" }] },
+      { kind: "code", text: "pip install x\n\n[not](http://a.example)" },
+      { kind: "paragraph", parts: [{ kind: "text", text: "After" }] }
+    ]);
+    expect(linksIn("```\n[not](http://a.example)\n```")).toEqual([]);
+  });
+
+  it("parses lists, and screens the links inside them", () => {
+    const body = "- One\n- See [two](http://a.example)";
+    expect(parseBody(body)[0]!.kind).toBe("list");
+    expect(linksIn(body)).toEqual(["http://a.example"]);
+  });
+
+  it("parses bold and inline code, and doesn't read links inside code", () => {
+    expect(parseBody("Run **this** with `[x](http://a.example)`")[0]).toEqual({
+      kind: "paragraph",
+      parts: [
+        { kind: "text", text: "Run " },
+        { kind: "bold", text: "this" },
+        { kind: "text", text: " with " },
+        { kind: "code", text: "[x](http://a.example)" }
+      ]
+    });
+    expect(linksIn("`[x](http://a.example)`")).toEqual([]);
+  });
+
+  it("leaves an unclosed fence as text", () => {
+    expect(parseBody("```\ncode")[0]!.kind).toBe("paragraph");
+  });
+});
+
 describe("image screening", () => {
   it("accepts a real PNG and names the sniffed type", () => {
     expect(checkImageFile(PNG, "image/png")).toEqual({ mime: "image/png" });
