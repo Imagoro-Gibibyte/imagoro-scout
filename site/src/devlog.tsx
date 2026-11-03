@@ -9,6 +9,7 @@ interface Entry {
   body: string;
   author?: string;
   published_at?: string | null;
+  post?: string | null;
 }
 
 const colors = new Map(devlogSeed.projects.map((project) => [project.id, project.color]));

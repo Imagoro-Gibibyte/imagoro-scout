@@ -20,6 +20,7 @@ def main() -> int:
     parser.add_argument("--title", help="entry title")
     parser.add_argument("--body", help="entry body")
     parser.add_argument("--author", default="", help="author name (optional)")
+    parser.add_argument("--post", default="", help="slug of a post this update links to (optional)")
     parser.add_argument("--json", dest="json_file", help="read a JSON object from this file instead of flags")
     args = parser.parse_args()
 
@@ -34,6 +35,8 @@ def main() -> int:
         }
         if args.author:
             payload["author"] = args.author
+        if args.post:
+            payload["post"] = args.post
 
     if not payload.get("project") or not payload.get("title") or not payload.get("body"):
         parser.error("--project, --title and --body are required (or use --json)")
