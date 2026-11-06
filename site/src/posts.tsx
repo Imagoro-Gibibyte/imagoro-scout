@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import catalog from "../catalog/skills.json";
+import { LOGIN_ROUTE, REGISTER_ROUTE, displayName, useMe, type OwnPost } from "./auth";
 import { parseBody, type Inline } from "./post-body";
 import { Link } from "./router";
 
@@ -117,6 +118,17 @@ export function PostPage({ slug }: { slug: string }) {
   const [editSummary, setEditSummary] = useState("");
   const [editBody, setEditBody] = useState("");
   const [removeImages, setRemoveImages] = useState<Set<number>>(new Set());
+  const me = useMe();
+  const [owned, setOwned] = useState(false);
+
+  // The owner edits with their session; everyone else goes through the emailed token.
+  useEffect(() => {
+    if (!me) return setOwned(false);
+    fetch("/api/auth/posts")
+      .then((res) => (res.ok ? (res.json() as Promise<OwnPost[]>) : []))
+      .then((own) => setOwned(own.some((item) => item.slug === slug)))
+      .catch(() => setOwned(false));
+  }, [me, slug]);
 
   useEffect(() => {
     fetch(`/api/posts/${encodeURIComponent(slug)}`)
@@ -182,7 +194,7 @@ export function PostPage({ slug }: { slug: string }) {
         )}
       </section>
       <p>
-        <button type="button" className="pf-btn" onClick={() => { setEditOpen(true); setEditStep("email"); setEditStatus(null); }}>
+        <button type="button" className="pf-btn" onClick={() => { setEditOpen(true); setEditStep(owned ? "edit" : "email"); setEditStatus(null); }}>
           Edit post
         </button>{" "}
         <Link to="/skills">Back to Skills &amp; Tools</Link>
@@ -221,7 +233,12 @@ export function PostPage({ slug }: { slug: string }) {
                   <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} required />
                 </label>
                 <p className="pf-muted">
-                  We'll send a one-time token to this address. It's used only to post updates or make site edits.
+                  If this is the email the post was submitted with, we'll send a one-time token to it.{" "}
+                  {me ? null : (
+                    <>
+                      Posts submitted while <Link to={LOGIN_ROUTE}>signed in</Link> can be edited without one.
+                    </>
+                  )}
                 </p>
                 {editStatus ? <p role="alert">{editStatus}</p> : null}
                 <button type="submit" className="pf-btn">Send token</button>{" "}
@@ -249,7 +266,9 @@ export function PostPage({ slug }: { slug: string }) {
                   Token
                   <input type="password" value={editToken} onChange={(e) => setEditToken(e.target.value)} required autoComplete="off" />
                 </label>
-                <p className="pf-muted">The token travels over HTTPS and is verified server-side; only its hash is stored, never the plaintext.</p>
+                <p className="pf-muted">
+                  The token travels over HTTPS and is checked on the server, which stores only its hash. It's spent when you save.
+                </p>
                 {editStatus ? <p role="status">{editStatus}</p> : null}
                 <button type="submit" className="pf-btn">Submit</button>{" "}
                 <button type="button" onClick={() => { setEditOpen(false); setEditToken(""); }}>Close</button>
@@ -263,8 +282,7 @@ export function PostPage({ slug }: { slug: string }) {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        email: editEmail,
-                        token: editToken,
+                        ...(owned ? {} : { email: editEmail, token: editToken }),
                         title: editTitle,
                         summary: editSummary,
                         body: editBody,
@@ -335,6 +353,7 @@ export function PostPage({ slug }: { slug: string }) {
 }
 
 export function SubmitPage() {
+  const me = useMe();
   const [state, setState] = useState<"idle" | "sending" | "queued">("idle");
   const [reasons, setReasons] = useState<readonly Rejection[]>([]);
 
@@ -359,6 +378,11 @@ export function SubmitPage() {
         <h1>Thanks</h1>
         <p role="status">Your post passed screening and is waiting for review. Nothing goes live until it's approved.</p>
         <p>
+          {me ? (
+            <>
+              <Link to="/account/posts">Your posts</Link> ·{" "}
+            </>
+          ) : null}
           <Link to="/skills">Back to Skills &amp; Tools</Link>
         </p>
       </article>
@@ -389,18 +413,33 @@ export function SubmitPage() {
           Summary
           <input name="summary" required maxLength={280} />
         </label>
-        <label>
-          Name (optional)
-          <input name="author" maxLength={60} />
-        </label>
-        <label>
-          Email (optional)
-          <input name="email" type="email" maxLength={120} />
-        </label>
-        <p className="pf-muted">
-          Your email is used only to send you one-time use tokens to post updates or make site edits. It is not stored for
-          marketing.
-        </p>
+        {me ? (
+          <>
+            <label>
+              Name
+              <input name="author" maxLength={60} defaultValue={me.profile.displayName ?? ""} placeholder="Anonymous" />
+            </label>
+            <p className="pf-muted">
+              Posting as {displayName(me)}. The post is linked to your account, so you can edit it while signed in.
+            </p>
+          </>
+        ) : (
+          <>
+            <label>
+              Name (optional)
+              <input name="author" maxLength={60} />
+            </label>
+            <label>
+              Email (optional)
+              <input name="email" type="email" maxLength={254} />
+            </label>
+            <p className="pf-muted">
+              Your email is used only to send you one-time tokens to edit this post, and only a salted hash of it is stored.{" "}
+              Or <Link to={`${LOGIN_ROUTE}?next=${SUBMIT_ROUTE}`}>sign in</Link> or <Link to={REGISTER_ROUTE}>create an account</Link>{" "}
+              to own your posts. See the <Link to="/privacy">privacy notice</Link>.
+            </p>
+          </>
+        )}
         <label>
           Skill
           <select name="skill" defaultValue="">

@@ -1,44 +1,34 @@
-import type { Env } from "../_store";
+import { LIMITS, clientIp, normalizeEmail, overLimit, salted, sendMail, sha256Hex, validEmail, type AuthEnv } from "../../auth/_lib";
+import { editEmailHash } from "../_edit";
 
-/** POST /api/posts/:slug/edit-request { email } — issues a one-time edit token.
- *  The plaintext token is never stored; only its SHA-256 hash is kept in D1.
- *  Email delivery is an integration point: configure a provider (e.g. Resend)
- *  via MAIL_PROVIDER_URL / MAIL_API_KEY, or a Cloudflare Email Worker binding.
- *  Without a provider the token is still issued and hashed, but not delivered. */
-export const onRequestPost: PagesFunction<Env & { MAIL_PROVIDER_URL?: string; MAIL_API_KEY?: string }> = async ({ env, request, params }) => {
+/** POST /api/posts/:slug/edit-request { email }: mails a one-time edit token.
+ *  A token is issued only when the email is the one the post was submitted with, and the reply is
+ *  the same either way, so it says nothing about who wrote a post. Only hashes of the token and the
+ *  email are stored. Delivery goes through the mail relay (MAIL_PROVIDER_URL / MAIL_API_KEY). */
+export const onRequestPost: PagesFunction<AuthEnv> = async ({ env, request, params }) => {
   if (!env.DB || !env.SKILL_SALT) return Response.json({ ok: false, reason: "Not configured." }, { status: 503 });
+  if (request.headers.get("Origin") !== new URL(request.url).origin) return new Response("Forbidden", { status: 403 });
+  if (await overLimit(env.DB, await salted(env, "edit-ip", clientIp(request)), LIMITS.resetPerIp)) {
+    return Response.json({ ok: false, reasons: [{ field: "form", reason: "Too many attempts. Try again later." }] }, { status: 429 });
+  }
   const slug = String(params.slug ?? "");
-  const body = await request.json().catch(() => ({})) as { email?: unknown };
-  const email = String(body.email ?? "").trim();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  const body = (await request.json().catch(() => ({}))) as { email?: unknown };
+  const email = normalizeEmail(body.email);
+  if (!validEmail(email)) {
     return Response.json({ ok: false, reasons: [{ field: "email", reason: "A valid email is required." }] }, { status: 422 });
   }
 
-  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)));
-  const hash = Array.from(digest).map((b) => b.toString(16).padStart(2, "0")).join("");
-
-  const id = crypto.randomUUID();
-  const now = new Date();
-  const expires = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
-  await env.DB.prepare(
-    "INSERT INTO edit_tokens (id, post_slug, email, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-  ).bind(id, slug, email, hash, expires, now.toISOString()).run();
-
-  // Delivery is best-effort and pluggable. The token itself is never returned here.
-  let emailSent = false;
-  if (env.MAIL_PROVIDER_URL && env.MAIL_API_KEY) {
-    try {
-      await fetch(env.MAIL_PROVIDER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.MAIL_API_KEY}` },
-        body: JSON.stringify({ to: email, subject: "Your edit token", text: `Token: ${token}\nExpires: ${expires}` })
-      });
-      emailSent = true;
-    } catch {
-      emailSent = false;
-    }
+  const emailHash = await editEmailHash(env, email);
+  const owner = await env.DB.prepare("SELECT 1 FROM posts WHERE slug = ? AND edit_email_hash = ?").bind(slug, emailHash).first();
+  if (owner) {
+    const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+    const now = new Date();
+    const expires = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+    await env.DB.prepare(
+      "INSERT INTO edit_tokens (id, post_slug, email, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    ).bind(crypto.randomUUID(), slug, emailHash, await sha256Hex(token), expires, now.toISOString()).run();
+    await sendMail(env, email, "Your edit token", `Token: ${token}\nExpires: ${expires}`);
   }
 
-  return Response.json({ ok: true, emailSent }, { status: 202, headers: { "Cache-Control": "no-store" } });
+  return Response.json({ ok: true }, { status: 202, headers: { "Cache-Control": "no-store" } });
 };

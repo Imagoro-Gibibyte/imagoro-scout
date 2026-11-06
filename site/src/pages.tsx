@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { findPage, type Page, type Section } from "./content";
 import { formatAttrs } from "./format";
 import { reducedMotion } from "./effects";
@@ -101,7 +101,8 @@ function SectionView({ section, index }: { section: Section; index: number }) {
   }
 }
 
-export function PageView({ page }: { page: Page }) {
+/** `aside` goes after the first section: the home page's login panel sits under the hero. */
+export function PageView({ page, aside = null }: { page: Page; aside?: ReactNode }) {
   return (
     <article className="pf-page">
       {page.route === "/" ? null : (
@@ -110,8 +111,12 @@ export function PageView({ page }: { page: Page }) {
           <p className="pf-sub">{page.description}</p>
         </header>
       )}
-      {page.sections.map((section, index) => (
+      {page.sections.slice(0, 1).map((section, index) => (
         <SectionView key={index} section={section} index={index} />
+      ))}
+      {aside}
+      {page.sections.slice(1).map((section, index) => (
+        <SectionView key={index + 1} section={section} index={index + 1} />
       ))}
     </article>
   );

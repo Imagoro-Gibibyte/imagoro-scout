@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequest as adminGate } from "../functions/api/admin/_middleware";
 import { onRequestPost as approve } from "../functions/api/admin/posts/[id]/approve";
@@ -12,31 +9,7 @@ import { checkHost, checkImageFile, checkLinkShape, classifyImage } from "../fun
 import { onRequestGet as readImage } from "../functions/api/posts/images/[id]/[position]";
 import { onRequestGet as list, onRequestPost as submit } from "../functions/api/posts/index";
 import { imagesIn, linksIn, parseBody } from "../src/post-body";
-
-// Vite's resolver drops the node: prefix from a static import of this newer built-in.
-const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
-type DatabaseSync = InstanceType<typeof DatabaseSync>;
-
-/** Just enough of D1, over real SQLite, to run the real statements from the real migrations. */
-function fakeD1(sqlite: DatabaseSync) {
-  const prepare = (sql: string) => {
-    let args: unknown[] = [];
-    const statement = {
-      bind(...values: unknown[]) {
-        args = values;
-        return statement;
-      },
-      all: async () => ({ results: sqlite.prepare(sql).all(...(args as [])) }),
-      first: async () => sqlite.prepare(sql).get(...(args as [])) ?? null,
-      run: async () => ({ meta: { changes: Number(sqlite.prepare(sql).run(...(args as [])).changes) } })
-    };
-    return statement;
-  };
-  return {
-    prepare,
-    batch: async (statements: { run(): Promise<unknown> }[]) => Promise.all(statements.map((s) => s.run()))
-  } as unknown as D1Database;
-}
+import { freshDb } from "./d1";
 
 const ORIGIN = "https://site.test";
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
@@ -66,9 +39,7 @@ function resolver(answer: unknown) {
 }
 
 beforeEach(() => {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(readFileSync(join(import.meta.dirname, "../migrations/0001_posts.sql"), "utf8"));
-  env = { DB: fakeD1(sqlite), AI: safeAi, SKILL_SALT: "salt", POSTS_ADMIN_TOKEN: "secret" };
+  env = { DB: freshDb().db, AI: safeAi, SKILL_SALT: "salt", POSTS_ADMIN_TOKEN: "secret" };
   resolver({ Status: 0, Answer: [{ type: 1, data: "192.0.2.1" }] });
 });
 
