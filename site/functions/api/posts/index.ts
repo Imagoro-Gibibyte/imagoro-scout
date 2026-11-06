@@ -1,5 +1,7 @@
 import { linksIn } from "../../../src/post-body";
+import { readSession, validEmail, type AuthEnv } from "../auth/_lib";
 import { visitor } from "../skills/_events";
+import { editEmailHash } from "./_edit";
 import { checkImageFile, classifyImage, screenLinks, type Rejection } from "./_screen";
 import { MAX_IMAGES, checkText, json, overLimit, publicPost, rejected, slugify, type Env, type PostRow } from "./_store";
 
@@ -23,8 +25,9 @@ function field(form: FormData, name: string): string {
 /**
  * POST /api/posts: a multipart submission. Anything that fails screening is answered with its
  * reasons and isn't stored. Anything that passes waits as `pending` until an operator approves it.
+ * A signed-in author owns the post. An anonymous one can leave an email to get edit tokens at.
  */
-export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
+export const onRequestPost: PagesFunction<AuthEnv> = async ({ env, request }) => {
   if (request.headers.get("Origin") !== new URL(request.url).origin) return new Response("Forbidden", { status: 403 });
   if (!env.DB || !env.SKILL_SALT) {
     return json({ ok: false, reasons: [{ field: "form", reason: "Posting isn't open yet." }] }, 503);
@@ -50,10 +53,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     body: field(form, "body").trim(),
     skill: field(form, "skill") || null
   };
-  const author = field(form, "author").trim().slice(0, 60) || "Anonymous";
+  const session = await readSession(env, request);
+  const profile = session
+    ? await env.DB.prepare("SELECT display_name FROM account_profiles WHERE account_id = ?").bind(session.accountId)
+        .first<{ display_name: string | null }>()
+    : null;
+  const author = field(form, "author").trim().slice(0, 60) || profile?.display_name || "Anonymous";
+  const email = field(form, "email").trim();
   const files = form.getAll("images").filter((value): value is File => typeof value !== "string");
 
   const reasons: Rejection[] = checkText(post, files.length);
+  if (!session && email && !validEmail(email.toLowerCase())) reasons.push({ field: "email", reason: "That email isn't valid." });
   if (files.length > MAX_IMAGES) reasons.push({ field: "images", reason: `A post can have ${MAX_IMAGES} images at most.` });
   if (reasons.length > 0) return rejected(reasons);
 
@@ -76,8 +86,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const now = new Date().toISOString();
   await env.DB.batch([
     env.DB.prepare(
-      "INSERT INTO posts (id, slug, title, summary, body, skill, author, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(id, `${slugify(post.title)}-${id.slice(0, 8)}`, post.title, post.summary, post.body, post.skill, author, now, now),
+      "INSERT INTO posts (id, slug, title, summary, body, skill, author, account_id, edit_email_hash, created_at, updated_at) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(
+      id, `${slugify(post.title)}-${id.slice(0, 8)}`, post.title, post.summary, post.body, post.skill, author,
+      session?.accountId ?? null, !session && email ? await editEmailHash(env, email) : null, now, now
+    ),
     ...images.map(({ mime, bytes }, i) =>
       env.DB!.prepare("INSERT INTO post_images (post_id, position, mime, bytes) VALUES (?, ?, ?, ?)").bind(id, i + 1, mime, bytes)
     )

@@ -23,6 +23,9 @@ npm run preview
 | `/skills/posts/new` | Submit a post for review |
 | `/skills/posts/<slug>` | A published post |
 | `/devlog` | Dated project updates, linked from the footer |
+| `/login`, `/register`, `/reset`, `/verify` | Site accounts |
+| `/profile`, `/account/posts` | The signed-in account's profile and posts |
+| `/privacy`, `/terms` | Privacy notice and terms of use, linked from the footer |
 | `/term` | The browser terminal |
 | `/contact` | Source and issues |
 
@@ -93,11 +96,62 @@ stored in D1, so they're limited to 1 MB each.
 | `SKILL_SALT` | Secret | Daily visitor hash for the limit of 3 submissions |
 | `POSTS_ADMIN_TOKEN` | Secret | Bearer token for `/api/admin/*`. Without it, that API stays shut |
 | `POSTS_ADMIN_ORIGINS` | Variable | Comma-separated origins allowed to call the admin API |
+| `MAIL_PROVIDER_URL` | Variable | URL of the mail relay in `email-worker/`. Without it, no mail is sent |
+| `MAIL_API_KEY` | Secret | Bearer token for the relay: the same value as the relay's `RELAY_TOKEN` |
 
 `migrations/0002_seed_vault_memory.sql` queues the launch post as `pending`, so it needs an
 approval like any other post.
 
 `npm test` runs the real handlers against the real migrations on SQLite.
+
+Anonymous posts can be edited with a one-time token, mailed only to the address the post was
+submitted with. The post keeps a salted hash of that address, never the address itself, and
+the token is spent when the edit is saved.
+
+## Accounts
+
+Accounts belong to this site only: a profile, and ownership of the posts submitted while
+signed in, which their owner can then edit without a token. They grant nothing anywhere else.
+The handlers are in `functions/api/auth/`, and the schema is `migrations/0006_accounts.sql`.
+
+| Route | What |
+|---|---|
+| `POST /api/auth/register` | Creates the account, mails a confirmation link, and signs in |
+| `POST /api/auth/login`, `/logout` | Starts or revokes a session |
+| `GET /api/auth/me` | The account and profile, or 401 |
+| `PATCH /api/auth/profile` | Display name, bio and an `https://` website |
+| `POST /api/auth/change-password` | Needs the current password, and signs out the other sessions |
+| `POST /api/auth/request-reset`, `/reset` | Mails a reset link, then sets the password and signs out every session |
+| `POST /api/auth/verify-email` | Confirms the email with a token, or sends a new link |
+| `GET /api/auth/posts` | The account's own posts, in every status |
+| `GET`, `DELETE /api/auth/account` | Exports everything stored, or deletes the account and its posts |
+
+- **Passwords** are PBKDF2-SHA256 with a random salt, at 100,000 iterations, the most Workers
+  allow. The count is stored in each hash, so it can change without breaking old ones. A hash
+  takes more CPU than the Workers Free plan allows per request, so accounts need Workers Paid.
+- **Sessions** are a random 256-bit token in a `__Host-session` cookie (HttpOnly, Secure,
+  SameSite=Lax). Only its SHA-256 is stored. A session lasts 7 days, slides forward while in
+  use, and ends 30 days after sign-in at the latest.
+- **Mailed tokens** (confirmation, reset) are single-use, stored as hashes, and travel in the
+  link's fragment, so they don't reach server logs.
+- **Limits** live in `auth_limits`, keyed by salted hashes of the IP or email. Five wrong
+  passwords lock an account's sign-in for 15 minutes, and each route has a per-IP limit.
+- **CSRF:** `functions/api/auth/_middleware.ts` refuses any state-changing request whose
+  `Origin` isn't the site's own.
+- Wrong passwords and unknown emails get the same answer, and a reset request answers the same
+  whether or not the account exists. Account events record a kind and a time, nothing else.
+
+Apply the migration with `npx wrangler d1 migrations apply <database> --remote`. Accounts need
+`DB` and `SKILL_SALT`, and mail needs `MAIL_PROVIDER_URL` and `MAIL_API_KEY`. Without mail,
+accounts still work, but confirmation and reset links can't be delivered.
+
+The privacy contact on `/privacy` and `/terms` is the build variable `VITE_PRIVACY_CONTACT`.
+Without it, those pages point at `/contact`.
+
+### Mail relay
+
+`email-worker/` relays the site's mail to the provider. It answers only requests that carry
+its `RELAY_TOKEN` as a bearer token, and refuses everything when that isn't set.
 
 ## The terminal
 

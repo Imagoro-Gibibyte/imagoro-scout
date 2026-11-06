@@ -612,3 +612,94 @@
   position: absolute;
   left: -9999px;
 }
+
+/* Accounts */
+
+.pf-account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-s);
+}
+
+.pf-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75em;
+  height: 1.75em;
+  border-radius: var(--radius-pill);
+  background: var(--accent-primary);
+  color: var(--text-strong);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.pf-auth-panel {
+  max-width: 420px;
+  padding: var(--spacing-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alpha);
+}
+
+.pf-auth-form {
+  max-width: 420px;
+}
+
+.pf-auth-note {
+  font-size: var(--font-size-sm);
+}
+
+.pf-post-form .pf-auth-check {
+  display: block;
+}
+
+.pf-post-form .pf-auth-check input {
+  padding: 0;
+}
+
+.pf-status {
+  text-transform: uppercase;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.05em;
+}
+
+.pf-status-published {
+  color: var(--chip-ok);
+}
+
+.pf-status-rejected {
+  color: var(--danger);
+}
+
+.pf-status-pending {
+  color: var(--chip-warn);
+}
+
+button.pf-btn {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.pf-btn-danger {
+  background: var(--danger);
+}
+
+.pf-btn-danger:hover {
+  background: var(--danger-hover);
+}
+
+.pf-link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pf-legal .pf-section p,
+.pf-legal .pf-points {
+  max-width: 75ch;
+}

@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect } from "react";
+import { ACCOUNT_PAGES, AccountChip, LoginPanel } from "./auth";
 import { footerLinks, nav, site } from "./content";
 import { DevlogPage } from "./devlog";
 import { AsciiBrand, AsciiHero, SeaBackdrop } from "./effects";
+import { PrivacyPage, TermsPage } from "./legal";
 import { NotFound, PageView, pageFor } from "./pages";
 import { POSTS_ROUTE, PostPage, SUBMIT_ROUTE, SubmitPage } from "./posts";
 import { Link, useRoute } from "./router";
@@ -26,6 +28,7 @@ function Nav({ route }: { route: string }) {
           {item.label}
         </Link>
       ))}
+      <AccountChip />
     </nav>
   );
 }
@@ -38,6 +41,9 @@ export function Shell() {
   const isDevlog = route === "/devlog";
   const isSubmit = route === SUBMIT_ROUTE;
   const postSlug = !isSubmit && route.startsWith(`${POSTS_ROUTE}/`) ? route.slice(POSTS_ROUTE.length + 1) : null;
+  const account = ACCOUNT_PAGES[route];
+  const legal = route === "/privacy" ? { title: "Privacy", Page: PrivacyPage } : route === "/terms" ? { title: "Terms", Page: TermsPage } : null;
+  const plain = account ?? legal;
 
   const title = isTerminal
     ? `Terminal · ${site.title}`
@@ -45,6 +51,8 @@ export function Shell() {
       ? `Skills & Tools · ${site.title}`
     : isDevlog
       ? `Devlog · ${site.title}`
+    : plain
+      ? `${plain.title} · ${site.title}`
     : page
       ? page.route === "/"
         ? site.title
@@ -91,8 +99,10 @@ export function Shell() {
           <PostPage slug={postSlug} />
         ) : isDevlog ? (
           <DevlogPage />
+        ) : plain ? (
+          <plain.Page />
         ) : page ? (
-          <PageView page={page} />
+          <PageView page={page} aside={page.route === "/" ? <LoginPanel /> : null} />
         ) : (
           <NotFound route={route} />
         )}

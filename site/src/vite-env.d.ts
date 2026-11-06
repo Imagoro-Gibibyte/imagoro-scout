@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_AGENT_TOKEN?: string;
   /** Public repository URL, used for the source and issue links. */
   readonly VITE_REPO_URL?: string;
+  /** Address for privacy requests, shown on /privacy and /terms. Without it, they point at /contact. */
+  readonly VITE_PRIVACY_CONTACT?: string;
 }
 
 interface ImportMeta {
