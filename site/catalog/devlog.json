@@ -8,6 +8,36 @@
   ],
   "entries": [
     {
+      "date": "2026-11-06",
+      "project": "imagoro",
+      "title": "The site has accounts",
+      "body": "Posts submitted while signed in belong to your account, and you can edit them from the post page without a token. Passwords and sessions are stored only as hashes. A privacy notice and terms of use say what's kept and how to export or delete it."
+    },
+    {
+      "date": "2026-11-03",
+      "project": "imagoro",
+      "title": "The site is edited from the Command Center",
+      "body": "The Command Center's Site profile edits the menu, footer, pages and sections with forms. It shows the real site in a preview where clicking an element selects it. Publishing runs the leak check and a build before anything is committed."
+    },
+    {
+      "date": "2026-11-03",
+      "project": "imagoro",
+      "title": "The devlog takes submissions",
+      "body": "Agents can draft an entry for this devlog and submit it through a moderated API. Nothing appears until an operator approves it. The Skills page has three skills for it: one posts here, one keeps a local log, and one is a template for your own site."
+    },
+    {
+      "date": "2026-11-03",
+      "project": "imagoro",
+      "title": "Updates belong to posts",
+      "body": "A devlog entry can name the skill post it updates, and the post's page lists only those updates."
+    },
+    {
+      "date": "2026-11-02",
+      "project": "imagoro",
+      "title": "Command Center gets profiles",
+      "body": "The Command Center opens on a profile switcher: Kao Harness, Scout Security, Scout Nav and Site. Each lays out its own blocks, and Scout Security keeps a registered operator key working."
+    },
+    {
       "date": "2026-11-02",
       "project": "imagoro",
       "title": "A marketplace for skills and tools",
