@@ -11,9 +11,14 @@ export interface Session {
   accountId: string;
   email: string;
   emailVerified: boolean;
+  role: Role;
   /** A fresh cookie when the session slid forward, for the caller to send back. */
   refresh: string | null;
 }
+
+export type Role = "member" | "moderator" | "admin";
+/** Higher outranks lower: a tier can only act on accounts below it. */
+export const RANK: Record<Role, number> = { member: 0, moderator: 1, admin: 2 };
 
 export const SESSION_COOKIE = "__Host-session";
 export const SESSION_TTL_MS = 7 * 24 * 3600_000;
@@ -206,11 +211,12 @@ export async function readSession(env: AuthEnv, request: Request): Promise<Sessi
   if (!token || !env.DB) return null;
   const now = Date.now();
   const row = await env.DB.prepare(
-    "SELECT s.id, s.account_id, s.token_hash, s.created_at, s.expires_at, a.email, a.email_verified_at FROM account_sessions s " +
-      "JOIN accounts a ON a.id = s.account_id WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ?"
+    "SELECT s.id, s.account_id, s.token_hash, s.created_at, s.expires_at, a.email, a.email_verified_at, a.role FROM account_sessions s " +
+      "JOIN accounts a ON a.id = s.account_id " +
+      "WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND a.suspended_at IS NULL"
   )
     .bind(await sha256Hex(token), new Date(now).toISOString())
-    .first<{ id: string; account_id: string; created_at: string; expires_at: string; email: string; email_verified_at: string | null }>();
+    .first<{ id: string; account_id: string; created_at: string; expires_at: string; email: string; email_verified_at: string | null; role: Role }>();
   if (!row) return null;
 
   let refresh: string | null = null;
@@ -219,7 +225,10 @@ export async function readSession(env: AuthEnv, request: Request): Promise<Sessi
     await env.DB.prepare("UPDATE account_sessions SET expires_at = ? WHERE id = ?").bind(new Date(expires).toISOString(), row.id).run();
     refresh = sessionCookie(token, expires - now);
   }
-  return { sessionId: row.id, accountId: row.account_id, email: row.email, emailVerified: !!row.email_verified_at, refresh };
+  return {
+    sessionId: row.id, accountId: row.account_id, email: row.email, emailVerified: !!row.email_verified_at,
+    role: row.role ?? "member", refresh
+  };
 }
 
 /** Revokes every live session of an account, except `keep` when given. */

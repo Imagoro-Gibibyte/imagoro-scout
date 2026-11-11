@@ -23,9 +23,9 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ env, request }) =>
   }
 
   const account = await db
-    .prepare("SELECT id, password_hash FROM accounts WHERE email = ?")
+    .prepare("SELECT id, password_hash, suspended_at FROM accounts WHERE email = ?")
     .bind(email)
-    .first<{ id: string; password_hash: string }>();
+    .first<{ id: string; password_hash: string; suspended_at: string | null }>();
   if (!account) await burnPasswordCheck(password);
   if (!account || !(await verifyPassword(password, account.password_hash))) {
     await overLimit(db, failures, LIMITS.failuresPerAccount);
@@ -33,6 +33,8 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ env, request }) =>
     return fail(WRONG, 401);
   }
 
+  // Only someone with the right password learns the account is suspended.
+  if (account.suspended_at) return fail("This account is suspended.", 403);
   await logEvent(db, account.id, "login").run();
   return withCookie(json({ ok: true }), await issueSession(env, request, account.id));
 };

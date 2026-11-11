@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import catalog from "../catalog/skills.json";
-import { LOGIN_ROUTE, REGISTER_ROUTE, displayName, useMe, type OwnPost } from "./auth";
+import { LOGIN_ROUTE, PEOPLE_ROUTE, REGISTER_ROUTE, displayName, useMe, type OwnPost } from "./auth";
+import { Avatar, TierBadge } from "./avatar";
 import { parseBody, type Inline } from "./post-body";
 import { Link } from "./router";
 
@@ -11,8 +12,25 @@ export interface Post {
   body: string;
   skill: string | null;
   author: string;
+  /** Present when the author has a public profile. */
+  author_profile?: { handle: string; displayName: string | null; role: string; avatar: string | null } | null;
   published_at: string;
   images: Record<string, string>;
+}
+
+/** The author line: a linked avatar, name and badge for a public profile, or the plain name. */
+function Byline({ post }: { post: Post }) {
+  const profile = post.author_profile;
+  if (!profile) return <>{post.author}</>;
+  return (
+    <span className="pf-byline">
+      <Link to={`${PEOPLE_ROUTE}/${profile.handle}`}>
+        <Avatar src={profile.avatar} name={profile.displayName || profile.handle} />
+        {post.author}
+      </Link>{" "}
+      <TierBadge tier={profile.role} />
+    </span>
+  );
 }
 
 interface DevlogEntry {
@@ -98,7 +116,7 @@ export function PostList({ skill }: { skill?: string }) {
           </h3>
           <p>{post.summary}</p>
           <p className="pf-muted pf-skill-meta">
-            {post.author} · {post.published_at.slice(0, 10)}
+            <Byline post={post} /> · {post.published_at.slice(0, 10)}
           </p>
         </li>
       ))}
@@ -168,7 +186,7 @@ export function PostPage({ slug }: { slug: string }) {
         <h1>{post.title}</h1>
         <p className="pf-sub">{post.summary}</p>
         <p className="pf-muted pf-skill-meta">
-          {post.author} · {post.published_at.slice(0, 10)}
+          <Byline post={post} /> · {post.published_at.slice(0, 10)}
         </p>
       </header>
       <PostBody post={post} />

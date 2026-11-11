@@ -25,6 +25,8 @@ npm run preview
 | `/devlog` | Dated project updates, linked from the footer |
 | `/login`, `/register`, `/reset`, `/verify` | Site accounts |
 | `/profile`, `/account/posts` | The signed-in account's profile and posts |
+| `/u/<handle>` | A public profile |
+| `/moderation` | Post review and account moderation, for moderators and admins |
 | `/privacy`, `/terms` | Privacy notice and terms of use, linked from the footer |
 | `/term` | The browser terminal |
 | `/contact` | Source and issues |
@@ -119,7 +121,9 @@ The handlers are in `functions/api/auth/`, and the schema is `migrations/0006_ac
 | `POST /api/auth/register` | Creates the account, mails a confirmation link, and signs in |
 | `POST /api/auth/login`, `/logout` | Starts or revokes a session |
 | `GET /api/auth/me` | The account and profile, or 401 |
-| `PATCH /api/auth/profile` | Display name, bio and an `https://` website |
+| `PATCH /api/auth/profile` | Display name, handle, bio, an `https://` website, and whether the profile is public |
+| `POST`, `DELETE /api/auth/avatar` | Sets or removes the profile picture |
+| `GET /api/people/<handle>` | A public profile and its published posts |
 | `POST /api/auth/change-password` | Needs the current password, and signs out the other sessions |
 | `POST /api/auth/request-reset`, `/reset` | Mails a reset link, then sets the password and signs out every session |
 | `POST /api/auth/verify-email` | Confirms the email with a token, or sends a new link |
@@ -147,6 +151,38 @@ accounts still work, but confirmation and reset links can't be delivered.
 
 The privacy contact on `/privacy` and `/terms` is the build variable `VITE_PRIVACY_CONTACT`.
 Without it, those pages point at `/contact`.
+
+### Profiles
+
+A profile is private until its owner makes it public, which needs a handle. A public profile
+shows at `/u/<handle>` and next to its owner's posts, never with the email.
+
+- **Profile pictures** are cropped square in the browser (256 px PNG), shown as circles, and
+  screened on the server exactly like post images: file type, embedded content, then the Workers
+  AI classifier. 300 KB at most, 10 uploads an hour.
+- **Names, handles, bios and post author names** go through `functions/api/_textscreen.ts`. A
+  term list runs first, after normalizing what trolls use to disguise words: letters from other
+  alphabets, accents, full-width and styled letters, leet digits and symbols, letters spaced out
+  or split by punctuation and invisible characters, and repeated letters. Some terms match only
+  as whole words, so "Scunthorpe" and "therapist" pass. Text the list passes then goes to Llama
+  Guard 3 on Workers AI. Both layers fail closed, and only changed text is screened.
+- Handles that read as the site speaking (`admin`, `moderator`, `imagoro` and the like) are
+  reserved for moderators and admins.
+
+### Moderation tiers
+
+| Tier | Can |
+|---|---|
+| member | Post, and edit their own profile and posts |
+| moderator | Review posts (approve, reject, take down), and reset, suspend or restore members |
+| admin | Everything a moderator can, to moderators too, and move members between member and moderator |
+
+A tier only acts on accounts below it, never on itself. Admins are made by the operator, with
+the admin bearer token: `PATCH /api/admin/accounts/<id, handle or email> {"role": "admin"}`.
+Moderators see profiles but never emails, and every action goes in `moderation_log` with its
+reason. A suspended account is signed out, can't sign in, and its public profile disappears.
+The routes are under `functions/api/mod/`, and the schema is
+`migrations/0008_profiles_and_moderation.sql`.
 
 ### Mail relay
 

@@ -1,9 +1,11 @@
 import { lazy, Suspense, useEffect } from "react";
-import { ACCOUNT_PAGES, AccountChip, LoginPanel } from "./auth";
+import { ACCOUNT_PAGES, AccountChip, LoginPanel, MODERATION_ROUTE, PEOPLE_ROUTE } from "./auth";
 import { footerLinks, nav, site } from "./content";
 import { DevlogPage } from "./devlog";
 import { AsciiBrand, AsciiHero, SeaBackdrop } from "./effects";
 import { PrivacyPage, TermsPage } from "./legal";
+import { ModerationPage } from "./moderation";
+import { PublicProfilePage } from "./people";
 import { NotFound, PageView, pageFor } from "./pages";
 import { POSTS_ROUTE, PostPage, SUBMIT_ROUTE, SubmitPage } from "./posts";
 import { Link, useRoute } from "./router";
@@ -43,7 +45,12 @@ export function Shell() {
   const postSlug = !isSubmit && route.startsWith(`${POSTS_ROUTE}/`) ? route.slice(POSTS_ROUTE.length + 1) : null;
   const account = ACCOUNT_PAGES[route];
   const legal = route === "/privacy" ? { title: "Privacy", Page: PrivacyPage } : route === "/terms" ? { title: "Terms", Page: TermsPage } : null;
-  const plain = account ?? legal;
+  const handle = route.startsWith(`${PEOPLE_ROUTE}/`) ? route.slice(PEOPLE_ROUTE.length + 1) : null;
+  const plain =
+    account ??
+    legal ??
+    (route === MODERATION_ROUTE ? { title: "Moderation", Page: ModerationPage } : null) ??
+    (handle ? { title: `@${handle}`, Page: () => <PublicProfilePage handle={handle} /> } : null);
 
   const title = isTerminal
     ? `Terminal · ${site.title}`

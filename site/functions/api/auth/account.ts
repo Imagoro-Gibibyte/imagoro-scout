@@ -9,8 +9,9 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ env, request }) => 
   const session = await readSession(env, request);
   if (!session) return fail("Sign in first.", 401);
   const [account, profile, posts, sessions, events] = await Promise.all([
-    db.prepare("SELECT email, email_verified_at, created_at, updated_at FROM accounts WHERE id = ?").bind(session.accountId).first(),
-    db.prepare("SELECT display_name, bio, website FROM account_profiles WHERE account_id = ?").bind(session.accountId).first(),
+    db.prepare("SELECT email, email_verified_at, role, created_at, updated_at FROM accounts WHERE id = ?").bind(session.accountId).first(),
+    db.prepare("SELECT display_name, bio, website, handle, public, (SELECT updated_at FROM account_avatars WHERE account_id = ?1) AS avatar_updated_at " +
+      "FROM account_profiles WHERE account_id = ?1").bind(session.accountId).first(),
     db.prepare("SELECT slug, title, summary, body, skill, author, status, reject_reason, created_at, updated_at, published_at FROM posts WHERE account_id = ? ORDER BY created_at")
       .bind(session.accountId).all(),
     db.prepare("SELECT created_at, expires_at, revoked_at FROM account_sessions WHERE account_id = ? ORDER BY created_at")
@@ -47,7 +48,7 @@ export const onRequestDelete: PagesFunction<AuthEnv> = async ({ env, request }) 
     db.prepare(`DELETE FROM post_images WHERE post_id IN (${owned})`).bind(id),
     db.prepare("DELETE FROM edit_tokens WHERE post_slug IN (SELECT slug FROM posts WHERE account_id = ?)").bind(id),
     db.prepare("DELETE FROM posts WHERE account_id = ?").bind(id),
-    ...["account_sessions", "account_events", "password_resets", "email_verifications", "account_profiles"].map((table) =>
+    ...["account_avatars", "account_sessions", "account_events", "password_resets", "email_verifications", "account_profiles"].map((table) =>
       db.prepare(`DELETE FROM ${table} WHERE account_id = ?`).bind(id)
     ),
     db.prepare("DELETE FROM accounts WHERE id = ?").bind(id)

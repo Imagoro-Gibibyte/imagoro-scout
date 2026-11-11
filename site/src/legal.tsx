@@ -45,7 +45,10 @@ export function PrivacyPage() {
           <li>Cloudflare Pages hosts the pages.</li>
           <li>Pages Functions, which run on Cloudflare Workers, handle sign-in, posts and download counts.</li>
           <li>Cloudflare D1 stores accounts, posts and counters, in the site's own Cloudflare account.</li>
-          <li>Workers AI checks images attached to posts, and Cloudflare's malware-blocking resolver checks the links in them.</li>
+          <li>
+            Workers AI checks images attached to posts and profile pictures, and screens names, handles and bios for explicit or
+            hateful content. Cloudflare's malware-blocking resolver checks the links in posts.
+          </li>
           <li>
             Cloudflare Email Service sends account and edit-token emails, so it receives the recipient address and the message.
           </li>
@@ -60,7 +63,9 @@ export function PrivacyPage() {
             when the account was created and its email confirmed.
           </li>
           <li>
-            <strong>Profile:</strong> the display name, bio and website you choose to enter.
+            <strong>Profile:</strong> the display name, handle, bio, website and profile picture you choose to enter. They're
+            private unless you make your profile public, which shows them, without your email, at <code>/u/handle</code> and on
+            your posts.
           </li>
           <li>
             <strong>Posts:</strong> what you submit, its images, and its review status. Posts you submit while signed in are linked
@@ -86,6 +91,10 @@ export function PrivacyPage() {
             <strong>Downloads:</strong> each download or share is counted once per visitor and day, using a hash that changes daily.
             No IP address is stored.
           </li>
+          <li>
+            <strong>Moderation:</strong> site moderators can see every profile, public or not, to review it, but never your email.
+            What a moderator does to an account is logged with the reason they give.
+          </li>
         </ul>
         <p>
           Cloudflare also processes the network data that any request carries, such as your IP address, under its own terms, to
@@ -109,6 +118,7 @@ export function PrivacyPage() {
           <li>A session stops working after 7 days without use, and after 30 days at most.</li>
           <li>Password-reset links expire after an hour, and email-confirmation links after 48 hours.</li>
           <li>Edit tokens for anonymous posts expire after 15 minutes.</li>
+          <li>The moderation log is kept for the site's records, and names accounts by their internal ID.</li>
         </ul>
       </section>
 
@@ -123,8 +133,8 @@ export function PrivacyPage() {
             <strong>Correction:</strong> change your profile and password on your profile page at any time.
           </li>
           <li>
-            <strong>Deletion:</strong> deleting your account removes it, its sessions, history and tokens, and every post it
-            submitted, published or not.
+            <strong>Deletion:</strong> deleting your account removes it, its profile and picture, its sessions, history and
+            tokens, and every post it submitted, published or not.
           </li>
         </ul>
         <p>

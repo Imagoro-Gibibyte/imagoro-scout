@@ -20,6 +20,20 @@ import { onRequestPost as editApply } from "../functions/api/posts/[slug]/edit-a
 import { onRequestPost as editRequest } from "../functions/api/posts/[slug]/edit-request";
 import { onRequestPost as editVerify } from "../functions/api/posts/[slug]/edit-verify";
 import { onRequestPost as submit } from "../functions/api/posts/index";
+import { onRequestPatch as setTier } from "../functions/api/admin/accounts/[id]";
+import { onRequestDelete as dropAvatar, onRequestPost as uploadAvatar } from "../functions/api/auth/avatar";
+import { onRequest as modGate } from "../functions/api/mod/_middleware";
+import { onRequestGet as modAccounts } from "../functions/api/mod/accounts/index";
+import { onRequestPost as modReset } from "../functions/api/mod/accounts/[id]/reset";
+import { onRequestPost as modRole } from "../functions/api/mod/accounts/[id]/role";
+import { onRequestPost as modSuspend } from "../functions/api/mod/accounts/[id]/suspend";
+import { onRequestGet as modLog } from "../functions/api/mod/log";
+import { onRequestPost as modApprove } from "../functions/api/mod/posts/[id]/approve";
+import { onRequestGet as modQueue } from "../functions/api/mod/posts/index";
+import { onRequestPost as modReject } from "../functions/api/mod/posts/[id]/reject";
+import { onRequestGet as person } from "../functions/api/people/[handle]";
+import { onRequestGet as personAvatar } from "../functions/api/people/[handle]/avatar";
+import { onRequestGet as readPost } from "../functions/api/posts/[slug]";
 import { freshDb } from "./d1";
 
 const ORIGIN = "https://site.test";
@@ -29,6 +43,11 @@ const PASSWORD = "correct horse battery";
 let env: Record<string, unknown>;
 let sqlite: ReturnType<typeof freshDb>["sqlite"];
 let mail: { to: string; subject: string; text: string }[];
+/** What the fake Workers AI answers: the image classifier and Llama Guard. */
+let verdict: { image: string; text: unknown };
+const fakeAi = {
+  run: async (model: string) => (model.includes("guard") ? { response: verdict.text } : { description: verdict.image })
+};
 
 const call = (handler: unknown, request: Request, params: Record<string, string> = {}) =>
   (handler as (ctx: unknown) => Promise<Response>)({ env, request, params, next: async () => new Response("reached") });
@@ -71,7 +90,8 @@ beforeEach(() => {
   const fresh = freshDb();
   sqlite = fresh.sqlite;
   mail = [];
-  env = { DB: fresh.db, SKILL_SALT: "salt", POSTS_ADMIN_TOKEN: "secret", MAIL_PROVIDER_URL: MAIL, MAIL_API_KEY: "relay" };
+  verdict = { image: "SAFE", text: { safe: true, categories: [] } };
+  env = { DB: fresh.db, AI: fakeAi, SKILL_SALT: "salt", POSTS_ADMIN_TOKEN: "secret", MAIL_PROVIDER_URL: MAIL, MAIL_API_KEY: "relay" };
   vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
     if (url === MAIL) {
       mail.push(JSON.parse(String(init?.body)));
@@ -140,7 +160,7 @@ describe("registration and sessions", () => {
     expect(account.password_hash).not.toContain(PASSWORD);
 
     const reply = (await (await whoami(cookieOf(res))).json()) as { account: { email: string; emailVerified: boolean } };
-    expect(reply.account).toEqual({ email: "ada@example.com", emailVerified: false });
+    expect(reply.account).toEqual({ email: "ada@example.com", emailVerified: false, role: "member" });
   });
 
   it("checks the email and password, and refuses a taken email in any case", async () => {
@@ -289,7 +309,7 @@ describe("profile and account", () => {
     expect((await patch({ website: "http://a.example" })).status).toBe(422);
     expect((await patch({ website: "https://a.example" })).status).toBe(200);
     const { profile: saved } = (await (await whoami(cookie)).json()) as { profile: unknown };
-    expect(saved).toEqual({ displayName: "Ada Lovelace", bio: "Notes.", website: "https://a.example/" });
+    expect(saved).toMatchObject({ displayName: "Ada Lovelace", bio: "Notes.", website: "https://a.example/" });
     expect((await call(profile, req("/api/auth/profile", { method: "PATCH", body: {} }))).status).toBe(401);
   });
 
@@ -396,5 +416,214 @@ describe("edit tokens for anonymous posts", () => {
   it("refuses edit requests from other origins", async () => {
     const foreign = new Request(`${ORIGIN}/api/posts/x/edit-request`, { method: "POST", headers: { Origin: "https://evil.example" }, body: "{}" });
     expect((await call(editRequest, foreign, { slug: "x" })).status).toBe(403);
+  });
+});
+
+// --- profiles, screening and moderation --------------------------------------------
+
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
+type Fn = (ctx: unknown) => Promise<Response>;
+
+/** A moderation route behind its middleware, the way Pages runs them. */
+function viaMod(handler: unknown, request: Request, params: Record<string, string> = {}) {
+  const data: Record<string, unknown> = {};
+  const next = () => (handler as Fn)({ env, request, params, data });
+  return (modGate as Fn)({ env, request, params, data, next });
+}
+
+const patchProfile = (cookie: string, body: unknown) => call(profile, req("/api/auth/profile", { method: "PATCH", cookie, body }));
+
+function avatarUpload(cookie: string, bytes: Uint8Array = PNG, type = "image/png") {
+  const body = new FormData();
+  body.set("avatar", new File([bytes], "me.png", { type }));
+  return new Request(`${ORIGIN}/api/auth/avatar`, { method: "POST", body, headers: { Origin: ORIGIN, Cookie: cookie } });
+}
+
+function accountId(email: string): string {
+  return (sqlite.prepare("SELECT id FROM accounts WHERE email = ?").get(email) as { id: string }).id;
+}
+
+async function makeTier(email: string, role: string) {
+  const res = await call(setTier, new Request(`${ORIGIN}/x`, { method: "PATCH", body: JSON.stringify({ role }) }), { id: email });
+  expect(res.status).toBe(200);
+}
+
+describe("profile text screening", () => {
+  it("blocks disguised slurs in names and bios, at sign-up and on save", async () => {
+    const bad = await call(register, req("/api/auth/register", { body: { email: "t@example.com", password: PASSWORD, displayName: "f.u.c.k y0u" } }));
+    expect(bad.status).toBe(422);
+    const cookie = await signUp();
+    expect((await patchProfile(cookie, { bio: "I like $h1t" })).status).toBe(422);
+    expect((await patchProfile(cookie, { bio: "I like voxels" })).status).toBe(200);
+  });
+
+  it("asks the model about text the list passes, and fails closed when it can't", async () => {
+    const cookie = await signUp();
+    verdict.text = { safe: false, categories: ["S10"] };
+    const flagged = await patchProfile(cookie, { bio: "something hateful in context" });
+    expect(flagged.status).toBe(422);
+    expect(JSON.stringify(await flagged.json())).toContain("flagged");
+    verdict.text = "no idea";
+    expect((await patchProfile(cookie, { bio: "anything" })).status).toBe(422);
+    delete env.AI;
+    expect((await patchProfile(cookie, { bio: "anything" })).status).toBe(422);
+    // A save that doesn't change any screened text doesn't need the model.
+    expect((await patchProfile(cookie, { website: "https://a.example" })).status).toBe(200);
+  });
+
+  it("screens a typed author name on a post", async () => {
+    expect((await call(submit, postForm({ author: "phuck" }))).status).toBe(422);
+    expect((await call(submit, postForm({ author: "Grace" }))).status).toBe(202);
+  });
+});
+
+describe("handles and public profiles", () => {
+  it("needs a valid, free, unreserved handle to go public", async () => {
+    const cookie = await signUp();
+    expect((await patchProfile(cookie, { public: true })).status).toBe(422);
+    expect((await patchProfile(cookie, { handle: "Ad" })).status).toBe(422);
+    expect((await patchProfile(cookie, { handle: "admin" })).status).toBe(422);
+    expect((await patchProfile(cookie, { handle: "Ada_L", public: true })).status).toBe(200);
+    const other = await signUp("bob@example.com");
+    expect((await patchProfile(other, { handle: "ada_l" })).status).toBe(409);
+  });
+
+  it("shows a public profile and its published posts, and hides a private one the same as a missing one", async () => {
+    const cookie = await signUp();
+    await call(verifyEmail, req("/api/auth/verify-email", { body: { token: tokenIn(mail[0]!.text) } }));
+    await patchProfile(cookie, { handle: "ada" });
+    const look = () => call(person, new Request(`${ORIGIN}/api/people/ada`), { handle: "ADA" });
+    expect((await look()).status).toBe(404);
+    expect((await call(person, new Request(ORIGIN), { handle: "nobody" })).status).toBe(404);
+
+    await patchProfile(cookie, { public: true });
+    await call(submit, postForm({ title: "Shown" }, cookie));
+    const { id, slug } = sqlite.prepare("SELECT id, slug FROM posts").get() as { id: string; slug: string };
+    await call(approve, admin(`/api/admin/posts/${id}/approve`), { id });
+    const shown = (await (await look()).json()) as { handle: string; role: string; posts: { title: string }[] };
+    expect(shown.handle).toBe("ada");
+    expect(shown.role).toBe("member");
+    expect(shown.posts.map((p) => p.title)).toEqual(["Shown"]);
+    expect(JSON.stringify(shown)).not.toContain("example.com");
+
+    const post = (await (await call(readPost, new Request(ORIGIN), { slug })).json()) as { author_profile: { handle: string } | null };
+    expect(post.author_profile?.handle).toBe("ada");
+    await patchProfile(cookie, { public: false });
+    const hidden = (await (await call(readPost, new Request(ORIGIN), { slug })).json()) as { author_profile: unknown };
+    expect(hidden.author_profile).toBeNull();
+  });
+});
+
+describe("profile pictures", () => {
+  it("takes a screened image, serves it on a public profile, and removes it", async () => {
+    const cookie = await signUp();
+    await patchProfile(cookie, { handle: "ada", public: true });
+    const res = await call(uploadAvatar, avatarUpload(cookie));
+    expect(res.status).toBe(200);
+    const pic = await call(personAvatar, new Request(ORIGIN), { handle: "ada" });
+    expect(pic.headers.get("Content-Type")).toBe("image/png");
+    expect(pic.headers.get("Content-Security-Policy")).toContain("sandbox");
+    const mine = (await (await whoami(cookie)).json()) as { profile: { avatar: string } };
+    expect(mine.profile.avatar.startsWith("/api/auth/avatar?v=")).toBe(true);
+
+    expect((await call(dropAvatar, req("/api/auth/avatar", { method: "DELETE", cookie }))).status).toBe(200);
+    expect((await call(personAvatar, new Request(ORIGIN), { handle: "ada" })).status).toBe(404);
+  });
+
+  it("refuses explicit, disguised, oversized or unscreenable images", async () => {
+    const cookie = await signUp();
+    verdict.image = "EXPLICIT";
+    expect((await call(uploadAvatar, avatarUpload(cookie))).status).toBe(422);
+    verdict.image = "SAFE";
+    expect((await call(uploadAvatar, avatarUpload(cookie, new TextEncoder().encode("<svg onload=x>"), "image/svg+xml"))).status).toBe(422);
+    expect((await call(uploadAvatar, avatarUpload(cookie, new Uint8Array([...PNG, ...new TextEncoder().encode("<script>")])))).status).toBe(422);
+    expect((await call(uploadAvatar, avatarUpload(cookie, new Uint8Array([...PNG, ...new Uint8Array(300_001)])))).status).toBe(422);
+    delete env.AI;
+    expect((await call(uploadAvatar, avatarUpload(cookie))).status).toBe(422);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM account_avatars").get()).toEqual({ n: 0 });
+  });
+});
+
+describe("moderator tiers", () => {
+  it("keeps members out of moderation", async () => {
+    const cookie = await signUp();
+    expect((await viaMod(modQueue, req("/api/mod/posts", { method: "GET", cookie }))).status).toBe(403);
+    expect((await viaMod(modQueue, req("/api/mod/posts", { method: "GET" }))).status).toBe(401);
+  });
+
+  it("lets a moderator review posts, and logs it", async () => {
+    const mod = await signUp("mod@example.com");
+    await makeTier("mod@example.com", "moderator");
+    await call(submit, postForm({ title: "Queued" }));
+    const [queued] = (await (await viaMod(modQueue, req("/api/mod/posts", { method: "GET", cookie: mod }))).json()) as { id: string }[];
+    expect((await viaMod(modApprove, req("/x", { cookie: mod }), { id: queued!.id })).status).toBe(200);
+    expect((await viaMod(modApprove, req("/x", { cookie: mod }), { id: queued!.id })).status).toBe(409);
+    expect((await viaMod(modReject, req("/x", { cookie: mod, body: { reason: "spam" } }), { id: queued!.id })).status).toBe(200);
+    expect(sqlite.prepare("SELECT status, reject_reason FROM posts").get()).toEqual({ status: "rejected", reject_reason: "spam" });
+    const entries = (await (await viaMod(modLog, req("/x", { method: "GET", cookie: mod }))).json()) as { action: string }[];
+    expect(entries.map((e) => e.action).filter((a) => a.startsWith("post-")).sort()).toEqual(["post-approve", "post-reject"]);
+
+    const foreign = new Request(`${ORIGIN}/x`, { method: "POST", headers: { Origin: "https://evil.example", Cookie: mod } });
+    expect((await viaMod(modApprove, foreign, { id: queued!.id })).status).toBe(403);
+  });
+
+  it("resets and suspends members, and a suspended account is signed out and hidden", async () => {
+    const mod = await signUp("mod@example.com");
+    await makeTier("mod@example.com", "moderator");
+    const troll = await signUp("troll@example.com");
+    await patchProfile(troll, { handle: "troll", public: true, bio: "fine at first" });
+    await call(uploadAvatar, avatarUpload(troll));
+    const id = accountId("troll@example.com");
+
+    const listed = (await (await viaMod(modAccounts, req("/api/mod/accounts?q=trol", { method: "GET", cookie: mod }))).json()) as { id: string }[];
+    expect(listed.map((a) => a.id)).toEqual([id]);
+    expect(JSON.stringify(listed)).not.toContain("@example.com");
+
+    const reset = await viaMod(modReset, req("/x", { cookie: mod, body: { fields: ["avatar", "bio", "handle"], reason: "rules" } }), { id });
+    expect(reset.status).toBe(200);
+    expect(sqlite.prepare("SELECT bio, handle, public FROM account_profiles WHERE account_id = ?").get(id)).toEqual({ bio: null, handle: null, public: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM account_avatars").get()).toEqual({ n: 0 });
+
+    expect((await viaMod(modSuspend, req("/x", { cookie: mod, body: { suspended: true } }), { id })).status).toBe(200);
+    expect((await whoami(troll)).status).toBe(401);
+    expect((await signIn("troll@example.com", PASSWORD)).status).toBe(403);
+    expect((await viaMod(modSuspend, req("/x", { cookie: mod, body: { suspended: false } }), { id })).status).toBe(200);
+    expect((await signIn("troll@example.com", PASSWORD)).status).toBe(200);
+  });
+
+  it("only acts downward: moderators on members, admins on moderators, nobody on admins or themselves", async () => {
+    const mod = await signUp("mod@example.com");
+    await makeTier("mod@example.com", "moderator");
+    const boss = await signUp("boss@example.com");
+    await makeTier("boss@example.com", "admin");
+    await signUp("peer@example.com");
+    await makeTier("peer@example.com", "moderator");
+    const member = await signUp("member@example.com");
+    const ids = {
+      mod: accountId("mod@example.com"),
+      boss: accountId("boss@example.com"),
+      peer: accountId("peer@example.com"),
+      member: accountId("member@example.com")
+    };
+    const suspend = (cookie: string, id: string) => viaMod(modSuspend, req("/x", { cookie, body: { suspended: true } }), { id });
+    const role = (cookie: string, id: string, r: string) => viaMod(modRole, req("/x", { cookie, body: { role: r } }), { id });
+
+    expect((await suspend(mod, ids.peer)).status).toBe(403);
+    expect((await suspend(mod, ids.mod)).status).toBe(403);
+    expect((await suspend(mod, ids.boss)).status).toBe(403);
+    expect((await role(mod, ids.member, "moderator")).status).toBe(403);
+    expect((await role(boss, ids.member, "admin")).status).toBe(422);
+    expect((await role(boss, ids.member, "moderator")).status).toBe(200);
+    expect((await viaMod(modQueue, req("/x", { method: "GET", cookie: member }))).status).toBe(200);
+    expect((await role(boss, ids.peer, "member")).status).toBe(200);
+    expect((await suspend(boss, ids.boss)).status).toBe(403);
+  });
+
+  it("puts the tier on /me and on public profiles", async () => {
+    const cookie = await signUp();
+    await makeTier("ada@example.com", "moderator");
+    await patchProfile(cookie, { handle: "ada", public: true });
+    expect(((await (await whoami(cookie)).json()) as { account: { role: string } }).account.role).toBe("moderator");
+    expect(((await (await call(person, new Request(ORIGIN), { handle: "ada" })).json()) as { role: string }).role).toBe("moderator");
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
+import { Avatar, TierBadge, squareAvatar, type Tier } from "./avatar";
 import { Link, navigate } from "./router";
 
 /**
@@ -8,8 +9,15 @@ import { Link, navigate } from "./router";
  */
 
 export interface Me {
-  account: { email: string; emailVerified: boolean };
-  profile: { displayName: string | null; bio: string | null; website: string | null };
+  account: { email: string; emailVerified: boolean; role: Tier };
+  profile: {
+    displayName: string | null;
+    bio: string | null;
+    website: string | null;
+    handle: string | null;
+    public: boolean;
+    avatar: string | null;
+  };
 }
 
 export interface OwnPost {
@@ -33,6 +41,12 @@ export const PROFILE_ROUTE = "/profile";
 export const ACCOUNT_POSTS_ROUTE = "/account/posts";
 export const RESET_ROUTE = "/reset";
 export const VERIFY_ROUTE = "/verify";
+export const MODERATION_ROUTE = "/moderation";
+export const PEOPLE_ROUTE = "/u";
+
+export function isModerator(value: Me | null | undefined): boolean {
+  return value?.account.role === "moderator" || value?.account.role === "admin";
+}
 
 /** undefined while the first check runs, null when signed out. */
 let me: Me | null | undefined;
@@ -73,13 +87,8 @@ export function displayName(value: Me): string {
   return value.profile.displayName || value.account.email;
 }
 
-function initials(value: Me): string {
-  const words = displayName(value).replace(/@.*/, "").split(/[\s._-]+/).filter(Boolean);
-  return words.slice(0, 2).map((word) => word[0]!.toUpperCase()).join("") || "?";
-}
-
 /** JSON to an auth route. Every failure comes back as a list of reasons to show. */
-async function send(path: string, body: unknown = {}, method = "POST"): Promise<{ ok: boolean; reasons: Rejection[]; data: Record<string, unknown> }> {
+export async function send(path: string, body: unknown = {}, method = "POST"): Promise<{ ok: boolean; reasons: Rejection[]; data: Record<string, unknown> }> {
   try {
     const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & { reasons?: Rejection[]; reason?: string };
@@ -101,7 +110,7 @@ function nextPath(): string {
   return next.startsWith("/") && !next.startsWith("//") ? next : PROFILE_ROUTE;
 }
 
-function Reasons({ reasons }: { reasons: readonly Rejection[] }) {
+export function Reasons({ reasons }: { reasons: readonly Rejection[] }) {
   if (reasons.length === 0) return null;
   return (
     <ul className="pf-post-errors" role="alert">
@@ -121,7 +130,7 @@ function PrivacyNote() {
   );
 }
 
-/** The header's account link: initials and Profile when signed in. */
+/** The header's account link: the profile picture (or initials) and Profile when signed in. */
 export function AccountChip() {
   const value = useMe();
   if (value === undefined) return null;
@@ -134,9 +143,7 @@ export function AccountChip() {
   }
   return (
     <Link className="pf-nav-link pf-account-chip" to={PROFILE_ROUTE}>
-      <span className="pf-avatar" aria-hidden="true">
-        {initials(value)}
-      </span>
+      <Avatar src={value.profile.avatar} name={displayName(value)} />
       Profile
     </Link>
   );
@@ -361,6 +368,49 @@ export function AccountPostsPage() {
   );
 }
 
+function ProfilePicture({ value }: { value: Me }) {
+  const [busy, setBusy] = useState(false);
+  const [reasons, setReasons] = useState<Rejection[]>([]);
+
+  async function upload(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    setReasons([]);
+    try {
+      const body = new FormData();
+      body.set("avatar", await squareAvatar(file));
+      const res = await fetch("/api/auth/avatar", { method: "POST", body });
+      const reply = (await res.json().catch(() => ({}))) as { reasons?: Rejection[] };
+      if (!res.ok) setReasons(reply.reasons ?? [{ field: "avatar", reason: "The picture wasn't accepted." }]);
+      else await refreshMe();
+    } catch (err) {
+      setReasons([{ field: "avatar", reason: err instanceof Error ? err.message : "The picture couldn't be read." }]);
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="pf-avatar-edit">
+      <Avatar src={value.profile.avatar} name={displayName(value)} size="lg" />
+      <div>
+        <Reasons reasons={reasons} />
+        <label className="pf-btn pf-file-btn">
+          {busy ? "Screening…" : value.profile.avatar ? "Change picture" : "Add a picture"}
+          <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" disabled={busy}
+            onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>{" "}
+        {value.profile.avatar ? (
+          <button type="button" className="pf-link-btn" disabled={busy}
+            onClick={async () => { await send("/api/auth/avatar", {}, "DELETE"); await refreshMe(); }}>
+            Remove
+          </button>
+        ) : null}
+        <p className="pf-muted">Cropped to a square and shown as a circle. It's checked for explicit content like post images.</p>
+      </div>
+    </div>
+  );
+}
+
 function ProfileForm({ value }: { value: Me }) {
   const [status, setStatus] = useState<string | null>(null);
   const [reasons, setReasons] = useState<Rejection[]>([]);
@@ -370,7 +420,13 @@ function ProfileForm({ value }: { value: Me }) {
     const form = new FormData(event.currentTarget);
     const reply = await send(
       "/api/auth/profile",
-      { displayName: form.get("displayName"), bio: form.get("bio"), website: form.get("website") },
+      {
+        displayName: form.get("displayName"),
+        handle: form.get("handle"),
+        bio: form.get("bio"),
+        website: form.get("website"),
+        public: form.get("public") === "on"
+      },
       "PATCH"
     );
     setReasons(reply.reasons);
@@ -386,6 +442,10 @@ function ProfileForm({ value }: { value: Me }) {
         <input name="displayName" defaultValue={value.profile.displayName ?? ""} maxLength={60} />
       </label>
       <label>
+        Handle (for your public profile)
+        <input name="handle" defaultValue={value.profile.handle ?? ""} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" placeholder="3 to 24 letters, digits or _" />
+      </label>
+      <label>
         Bio
         <textarea name="bio" defaultValue={value.profile.bio ?? ""} rows={4} maxLength={500} />
       </label>
@@ -393,6 +453,11 @@ function ProfileForm({ value }: { value: Me }) {
         Website
         <input name="website" type="url" placeholder="https://" defaultValue={value.profile.website ?? ""} maxLength={200} />
       </label>
+      <label className="pf-auth-check">
+        <input name="public" type="checkbox" defaultChecked={value.profile.public} /> Public profile: show my name, picture, bio
+        and published posts at <code>/u/handle</code>, and on my posts
+      </label>
+      <p className="pf-muted">Names, handles and bios are screened for explicit and hateful content when you save.</p>
       {status ? <p role="status">{status}</p> : null}
       <button className="pf-btn" type="submit">
         Save profile
@@ -496,8 +561,18 @@ export function ProfilePage() {
       {(value) => (
         <AuthPage title="Profile" sub={value.account.email}>
           <VerifyNotice value={value} />
+          <p className="pf-profile-links">
+            <TierBadge tier={value.account.role} />
+            {value.profile.public && value.profile.handle ? (
+              <Link to={`${PEOPLE_ROUTE}/${value.profile.handle}`}>Your public profile</Link>
+            ) : (
+              <span className="pf-muted">Your profile is private.</span>
+            )}
+            {isModerator(value) ? <Link to={MODERATION_ROUTE}>Moderation</Link> : null}
+          </p>
           <section className="pf-section">
             <h2>About you</h2>
+            <ProfilePicture value={value} />
             <ProfileForm value={value} />
           </section>
           <section className="pf-section">

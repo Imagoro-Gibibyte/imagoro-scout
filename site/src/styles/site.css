@@ -621,16 +621,147 @@
   gap: var(--spacing-s);
 }
 
+/* Profile pictures are always circles: a cropped image, or initials on the accent colour. */
 .pf-avatar {
   display: inline-grid;
+  flex: none;
   place-items: center;
-  width: 1.75em;
-  height: 1.75em;
-  border-radius: var(--radius-pill);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
   background: var(--accent-primary);
   color: var(--text-strong);
   font-size: var(--font-size-xs);
   font-weight: 700;
+  vertical-align: middle;
+}
+
+.pf-avatar-md {
+  width: 48px;
+  height: 48px;
+  font-size: var(--font-size-md);
+}
+
+.pf-avatar-lg {
+  width: 96px;
+  height: 96px;
+  font-size: var(--font-size-lg);
+}
+
+.pf-avatar-edit,
+.pf-person-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-l);
+}
+
+.pf-person-head h1 {
+  margin: 0;
+}
+
+.pf-person-bio {
+  max-width: 65ch;
+  white-space: pre-line;
+}
+
+.pf-byline a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-s);
+}
+
+.pf-tier {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.pf-tier-moderator {
+  color: var(--chip-ok);
+}
+
+.pf-tier-admin {
+  color: var(--accent-hover);
+}
+
+.pf-tier-suspended {
+  margin-left: var(--spacing-s);
+  color: var(--danger);
+}
+
+.pf-profile-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-l);
+}
+
+/* A file input dressed as a button: the label is the target, the input stays reachable. */
+.pf-file-btn {
+  position: relative;
+  cursor: pointer;
+}
+
+.pf-file-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pf-mod-tabs,
+.pf-mod-actions,
+.pf-mod-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-m);
+}
+
+.pf-mod-tabs {
+  margin-bottom: var(--spacing-l);
+  text-transform: capitalize;
+}
+
+.pf-mod-search input {
+  font: inherit;
+  color: inherit;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+.pf-mod-list {
+  display: grid;
+  gap: var(--spacing-l);
+  padding: 0;
+  list-style: none;
+}
+
+.pf-mod-body {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.pf-mod-log {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.pf-mod-log th,
+.pf-mod-log td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
 }
 
 .pf-auth-panel {

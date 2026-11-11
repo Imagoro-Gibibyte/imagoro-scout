@@ -1,4 +1,5 @@
 import { json } from "../posts/_store";
+import { screenText } from "../_textscreen";
 import {
   LIMITS, clientIp, emailLink, fail, hashPassword, issueEmailToken, issueSession, logEvent, normalizeEmail,
   overLimit, passwordProblem, readJson, salted, sendMail, validEmail, withCookie, type AuthEnv
@@ -17,6 +18,8 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ env, request }) =>
   if (!validEmail(email)) return fail("A valid email is required.", 422, "email");
   const problem = passwordProblem(password);
   if (problem) return fail(problem, 422, "password");
+  const screened = await screenText(env.AI, { displayName: { label: "name", value: displayName } });
+  if (screened.length > 0) return json({ ok: false, reasons: screened }, 422);
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();

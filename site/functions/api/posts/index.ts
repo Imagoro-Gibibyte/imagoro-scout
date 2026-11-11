@@ -2,6 +2,7 @@ import { linksIn } from "../../../src/post-body";
 import { readSession, validEmail, type AuthEnv } from "../auth/_lib";
 import { visitor } from "../skills/_events";
 import { editEmailHash } from "./_edit";
+import { screenText } from "../_textscreen";
 import { checkImageFile, classifyImage, screenLinks, type Rejection } from "./_screen";
 import { MAX_IMAGES, checkText, json, overLimit, publicPost, rejected, slugify, type Env, type PostRow } from "./_store";
 
@@ -68,6 +69,11 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ env, request }) =>
 
   const reasons: Rejection[] = checkText(post, files.length);
   if (!session && email && !validEmail(email.toLowerCase())) reasons.push({ field: "email", reason: "That email isn't valid." });
+  // A typed author name is public text like a display name, so it gets the same screen.
+  const typedAuthor = field(form, "author").trim().slice(0, 60);
+  if (typedAuthor && typedAuthor !== profile?.display_name && reasons.length === 0) {
+    reasons.push(...(await screenText(env.AI, { author: { label: "name", value: typedAuthor } })));
+  }
   if (files.length > MAX_IMAGES) reasons.push({ field: "images", reason: `A post can have ${MAX_IMAGES} images at most.` });
   if (reasons.length > 0) return rejected(reasons);
 

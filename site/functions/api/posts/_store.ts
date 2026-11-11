@@ -1,6 +1,7 @@
 import catalog from "../../../catalog/skills.json";
 import { imagesIn } from "../../../src/post-body";
 import type { AiBinding, Rejection } from "./_screen";
+import { publicAuthor } from "../_profiles";
 
 export interface Env {
   DB?: D1Database;
@@ -24,6 +25,7 @@ export interface PostRow {
   created_at: string;
   updated_at: string;
   published_at: string | null;
+  account_id?: string | null;
 }
 
 export interface PostText {
@@ -68,7 +70,7 @@ export function checkText(post: PostText, imageCount: number): Rejection[] {
   return reasons;
 }
 
-/** The public shape of a post: no moderation fields, and images as URLs. */
+/** The public shape of a post: no moderation fields, images as URLs, and the author's profile if public. */
 export async function publicPost(db: D1Database, row: PostRow) {
   const { results } = await db
     .prepare("SELECT position FROM post_images WHERE post_id = ? ORDER BY position")
@@ -81,6 +83,7 @@ export async function publicPost(db: D1Database, row: PostRow) {
     body: row.body,
     skill: row.skill,
     author: row.author,
+    author_profile: await publicAuthor(db, row.account_id ?? null),
     published_at: row.published_at,
     images: Object.fromEntries(results.map(({ position }) => [position, `/api/posts/images/${row.id}/${position}`]))
   };
