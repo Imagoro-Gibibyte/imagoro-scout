@@ -77,7 +77,7 @@ the counts show as 0.
 
 ## Posts
 
-Anyone can submit a post on `/skills/posts/new`. Nothing goes live without an operator's
+Anyone can submit a post on `/skills/posts/new`. Nothing goes live without our
 approval, and `functions/api/admin/posts/[id]/approve.ts` is the only code that publishes.
 
 1. **Screening** (`functions/api/posts/_screen.ts`) runs on submit. Images get file-type and
@@ -177,7 +177,7 @@ shows at `/u/<handle>` and next to its owner's posts, never with the email.
 | moderator | Review posts (approve, reject, take down), and reset, suspend or restore members |
 | admin | Everything a moderator can, to moderators too, and move members between member and moderator |
 
-A tier only acts on accounts below it, never on itself. Admins are made by the operator, with
+A tier only acts on accounts below it, never on itself. Admins are made by us, with
 the admin bearer token: `PATCH /api/admin/accounts/<id, handle or email> {"role": "admin"}`.
 Moderators see profiles but never emails, and every action goes in `moderation_log` with its
 reason. A suspended account is signed out, can't sign in, and its public profile disappears.

@@ -40,7 +40,7 @@ export function PrivacyPage() {
     <Legal title="Privacy notice" sub="What this site stores about you, who processes it, and how to have it changed or removed.">
       <section className="pf-section">
         <h2>Who processes your data</h2>
-        <p>The site runs entirely on Cloudflare, which processes data on the operator's behalf:</p>
+        <p>The site runs entirely on Cloudflare, which processes data on our behalf:</p>
         <ul className="pf-points">
           <li>Cloudflare Pages hosts the pages.</li>
           <li>Pages Functions, which run on Cloudflare Workers, handle sign-in, posts and download counts.</li>
@@ -107,7 +107,7 @@ export function PrivacyPage() {
         <p>
           Signing in sets one cookie, <code>__Host-session</code>, which is HttpOnly, Secure and SameSite=Lax. It holds a random
           token and nothing about you. There are no advertising or tracking cookies, and your data is never sold or shared for
-          advertising. If Cloudflare Web Analytics is turned on, it is cookieless and reports only aggregate counts.
+          advertising. We also use Cloudflare Web Analytics, which is cookieless and reports only aggregate counts.
         </p>
       </section>
 
@@ -138,7 +138,7 @@ export function PrivacyPage() {
           </li>
         </ul>
         <p>
-          For anything else, including a request about an anonymous post, reach the operator at <Contact />.
+          For anything else, including a request about an anonymous post, reach us at <Contact />.
         </p>
       </section>
 
@@ -189,7 +189,7 @@ export function TermsPage() {
       <section className="pf-section">
         <h2>Moderation</h2>
         <p>
-          Every post is screened automatically and reviewed by hand before it's published. The operator can edit, reject or take
+          Every post is screened automatically and reviewed by hand before it's published. We can edit, reject or take
           down any post, and can suspend or delete an account that breaks these terms. You can delete your own account at any
           time from your <Link to="/profile">profile</Link>.
         </p>
@@ -199,7 +199,7 @@ export function TermsPage() {
         <h2>Disclaimers</h2>
         <p>
           The site and the skills and tools on it are provided as they are, without warranty of any kind. Downloads are yours to
-          review before you run them. The operator isn't liable for losses that come from using the site or its content, as far
+          review before you run them. We aren't liable for losses that come from using the site or its content, as far
           as the law allows.
         </p>
       </section>
