@@ -51,6 +51,12 @@ export function PrivacyPage() {
           </li>
           <li>
             Cloudflare Email Service sends account and edit-token emails, so it receives the recipient address and the message.
+           </li>
+           <li>
+             Cloudflare Web Analytics counts page views. It is cookieless and identifies no individual; only aggregate counts are reported.
+           </li>
+           <li>
+             Cloudflare's network and DNS resolver handle every request and the link checks on posts, so Cloudflare sees IP addresses, request metadata and the domains checked.
           </li>
         </ul>
       </section>
@@ -98,7 +104,7 @@ export function PrivacyPage() {
         </ul>
         <p>
           Cloudflare also processes the network data that any request carries, such as your IP address, under its own terms, to
-          deliver and protect the site.
+          deliver and protect the site. That data is retained by Cloudflare under its own policy, not by us.
         </p>
       </section>
 
@@ -119,6 +125,11 @@ export function PrivacyPage() {
           <li>Password-reset links expire after an hour, and email-confirmation links after 48 hours.</li>
           <li>Edit tokens for anonymous posts expire after 15 minutes.</li>
           <li>The moderation log is kept for the site's records, and names accounts by their internal ID.</li>
+           <li>
+             Cloudflare-side data (Web Analytics aggregates, request and network logs, Email Service delivery logs, and Workers AI
+             inputs) is retained by Cloudflare under its own terms and time limits, not by us. We do not control those
+             retention periods.
+           </li>
         </ul>
       </section>
 
