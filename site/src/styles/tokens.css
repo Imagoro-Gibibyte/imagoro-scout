@@ -20,9 +20,9 @@
   --text-muted: #9fb0cf;
   --text-strong: #f8fafc;
   --accent: #4f8cff;
-  --accent-primary: #0f766e;
-  --accent-hover: #14b8a6;
-  --accent-dark: #134e4a;
+  --accent-primary: #0e7490;
+  --accent-hover: #06b6d4;
+  --accent-dark: #155e75;
   --panel-title: #93c5fd;
   --teal: #00c9c7;
   --danger: #b91c1c;
@@ -35,7 +35,7 @@
   --chip-ok: #9ff7ae;
   --chip-warn: #ffd686;
   --chip-bg: rgba(20, 28, 45, 0.8);
-  --selection: #0f766e;
+  --selection: #0e7490;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-pill: 999px;

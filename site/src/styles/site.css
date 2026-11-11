@@ -171,7 +171,7 @@
 }
 
 .pf-card {
-  background: rgba(15, 118, 110, 0.5);
+  background: rgba(14, 116, 144, 0.5);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: var(--spacing-l);
@@ -433,7 +433,7 @@
 }
 
 .pf-devlog-entry {
-  background: rgba(15, 118, 110, 0.5);
+  background: rgba(14, 116, 144, 0.5);
   border: 1px solid var(--border);
   border-left: 4px solid var(--project);
   border-radius: var(--radius-md);
@@ -831,7 +831,7 @@ button.pf-btn {
 }
 
 .pf-legal {
-  background: rgba(15, 118, 110, 0.5);
+  background: rgba(14, 116, 144, 0.5);
   border-radius: var(--radius-md);
   padding: var(--spacing-l);
   font-size: var(--font-size-sm);
