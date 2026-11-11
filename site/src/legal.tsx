@@ -199,7 +199,7 @@ export function TermsPage() {
         <h2>Disclaimers</h2>
         <p>
           The site and the skills and tools on it are provided as they are, without warranty of any kind. Downloads are yours to
-          review before you run them. We aren't liable for losses that come from using the site or its content, as far
+          review before you run them. We do moderate via a human for every post to the marketplace, but please be careful. We\n           aren't liable for losses that come from using the site or its content, as far
           as the law allows.
         </p>
       </section>
