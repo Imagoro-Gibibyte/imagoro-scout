@@ -25,6 +25,54 @@ The skill expects these paths, relative to the vault. Edit `SKILL.md` if your va
 | `Imported Local Docs/` | Repo documents copied into the vault |
 | `Archive/` | Older notes, sorted by the plugin |
 
+## ALWAYS START HERE folder for machine-specific notes
+
+Some notes must be read before any other: how to reach a lab node, what lives on it, and the safety rules for admin work. Put them in a folder that sorts first in `Plans Archive.base`, so they land at the top of the "By project" view instead of being buried among dated plans.
+
+Set it up by hand; the wizard doesn't create it, because the name and contents are yours:
+
+1. Make `Project Plans/0 ALWAYS START HERE/` (use a `0 ` or `* ` prefix; `0 ` is portable, since `*` is not allowed in file names on Windows).
+2. Add a note there with frontmatter such as:
+
+   ```yaml
+   ---
+   title: ALWAYS START HERE - SSH and lab network admin
+   project: 0 ALWAYS START HERE
+   repo: all
+   type: agent-guide
+   status: active
+   created: 2026-01-01
+   modified: 2026-01-01
+   ---
+   ```
+
+   `project: 0 ALWAYS START HERE` is what makes it sort first, because the archive base groups by `project` ascending.
+3. Write it as an agent guide: what lives on each node, why the SSH tooling exists, when to use it for development tasks, and the local network admin tidbits (mesh, ports, keygates, secrets handling). Link to the detailed runbooks instead of duplicating them.
+4. Update the layout block in `Project Plans/README.md` so the folder is listed at the top.
+
+### Secure host aliasing (short example)
+
+Keep host names, addresses and keys in one SSH config, never in a vault note:
+
+```ssh-config
+Host dell
+  HostName 192.0.2.10
+  User scout
+  IdentityFile ~/.ssh/lab_ed25519
+  IdentitiesOnly yes
+  ServerAliveInterval 30
+
+Host nuc
+  HostName 192.0.2.11
+  User scout
+  ProxyJump dell
+  IdentityFile ~/.ssh/lab_ed25519
+  IdentitiesOnly yes
+  ServerAliveInterval 30
+```
+
+Rules: one dedicated key per operator with `chmod 600`; `IdentitiesOnly yes`; reach nodes through another with `ProxyJump`; read secret directories with `sudo` on the node and don't copy them off; revoke and re-issue a key if it leaks.
+
 ## Setup
 
 Both ways need Python 3.10+ and version 1 of the MCP SDK (tested with `mcp` 1.28.1 and 1.30.0):
