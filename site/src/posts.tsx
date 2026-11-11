@@ -422,6 +422,12 @@ export function SubmitPage() {
             <p className="pf-muted">
               Posting as {displayName(me)}. The post is linked to your account, so you can edit it while signed in.
             </p>
+            {me.account.emailVerified ? null : (
+              <p role="alert">
+                Confirm your email before posting from your account. The link is in the email we sent when you signed up,
+                or send a new one from your <Link to="/profile">profile</Link>.
+              </p>
+            )}
           </>
         ) : (
           <>

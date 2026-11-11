@@ -10,7 +10,7 @@ import { Link } from "./router";
  */
 
 const CONTACT = (import.meta.env.VITE_PRIVACY_CONTACT ?? "").trim();
-export const LAST_UPDATED = "2026-11-06";
+export const LAST_UPDATED = "2026-11-11";
 
 function Contact() {
   return CONTACT ? (
@@ -46,11 +46,10 @@ export function PrivacyPage() {
           <li>Pages Functions, which run on Cloudflare Workers, handle sign-in, posts and download counts.</li>
           <li>Cloudflare D1 stores accounts, posts and counters, in the site's own Cloudflare account.</li>
           <li>Workers AI checks images attached to posts, and Cloudflare's malware-blocking resolver checks the links in them.</li>
+          <li>
+            Cloudflare Email Service sends account and edit-token emails, so it receives the recipient address and the message.
+          </li>
         </ul>
-        <p>
-          Account and edit-token emails are handed to a mail delivery provider, which receives the recipient address and the
-          message, and nothing else.
-        </p>
       </section>
 
       <section className="pf-section">

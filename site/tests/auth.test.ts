@@ -295,6 +295,7 @@ describe("profile and account", () => {
 
   it("exports the account, and deletes it with every post it owns", async () => {
     const cookie = await signUp();
+    await call(verifyEmail, req("/api/auth/verify-email", { body: { token: tokenIn(mail[0]!.text) } }));
     await call(submit, postForm({ title: "Mine" }, cookie));
     const exported = (await (await call(exportAccount, req("/api/auth/account", { method: "GET", cookie }))).json()) as {
       account: { email: string };
@@ -315,6 +316,15 @@ describe("profile and account", () => {
 });
 
 describe("posts under an account", () => {
+  it("needs a confirmed email before an account can post", async () => {
+    const cookie = await signUp();
+    const res = await call(submit, postForm({ title: "Too soon" }, cookie));
+    expect(res.status).toBe(403);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM posts").get()).toEqual({ n: 0 });
+    await call(verifyEmail, req("/api/auth/verify-email", { body: { token: tokenIn(mail[0]!.text) } }));
+    expect((await call(submit, postForm({ title: "Now" }, cookie))).status).toBe(202);
+  });
+
   it("smoke: register, confirm, log in, edit profile, post, edit by session, log out", async () => {
     await signUp("ada@example.com", PASSWORD, "Ada");
     await call(verifyEmail, req("/api/auth/verify-email", { body: { token: tokenIn(mail[0]!.text) } }));

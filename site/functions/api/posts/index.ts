@@ -54,6 +54,10 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ env, request }) =>
     skill: field(form, "skill") || null
   };
   const session = await readSession(env, request);
+  // A post owned by an account is tied to its email, so the address has to be confirmed first.
+  if (session && !session.emailVerified) {
+    return json({ ok: false, reasons: [{ field: "form", reason: "Confirm your email before posting from your account." }] }, 403);
+  }
   const profile = session
     ? await env.DB.prepare("SELECT display_name FROM account_profiles WHERE account_id = ?").bind(session.accountId)
         .first<{ display_name: string | null }>()
