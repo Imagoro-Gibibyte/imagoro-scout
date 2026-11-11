@@ -833,7 +833,43 @@ button.pf-btn {
 .pf-legal {
   background: rgba(15, 118, 110, 0.5);
   border-radius: var(--radius-md);
-  padding: var(--spacing-xl);
+  padding: var(--spacing-l);
+  font-size: var(--font-size-sm);
+}
+
+.pf-legal .pf-section {
+  margin: var(--spacing-m) 0;
+  padding-top: var(--spacing-m);
+}
+
+.pf-legal .pf-section h2 {
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--spacing-s);
+}
+
+.pf-legal .pf-section p,
+.pf-legal .pf-points {
+  max-width: 75ch;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.pf-legal .pf-points {
+  margin: var(--spacing-s) 0;
+  padding-left: var(--spacing-l);
+}
+
+.pf-legal .pf-points li + li {
+  margin-top: var(--spacing-s);
+}
+
+.pf-legal .pf-page-head h1 {
+  font-size: 24px;
+}
+
+.pf-legal .pf-sub {
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-m);
 }
 
 .pf-legal .pf-section p,
