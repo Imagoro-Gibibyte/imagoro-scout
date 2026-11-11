@@ -830,6 +830,12 @@ button.pf-btn {
   cursor: pointer;
 }
 
+.pf-legal {
+  background: rgba(29, 78, 216, 0.5);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xl);
+}
+
 .pf-legal .pf-section p,
 .pf-legal .pf-points {
   max-width: 75ch;
