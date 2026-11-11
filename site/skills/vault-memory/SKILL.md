@@ -36,6 +36,42 @@ The Obsidian vault (`<VAULT>`) is the human-readable memory layer for this works
 - If no vault note exists for the topic, say so explicitly and suggest importing the relevant local doc.
 - Do not paste large raw repo files when a vault summary exists.
 
-## Safety
+## Czkawka (duplicate / audit) sub-skill
+
+The vault MCP server also exposes a precached czkawka cache, so agents can audit
+drives/directories and clean up duplicates without running a full czkawka search
+on every turn.
+
+### How it works
+- Scans run once per *scope* (mode + roots + exclusions) and are stored as scoped
+  JSON files under `Project Plans/Czkawka/` (`cache.<slug>.json`), indexed by
+  `index.json`. Scopes are precached until the same scope is rescanned or the
+  14-day prune limit expires.
+- Reads (`czkawka_duplicates`, `czkawka_big_files`, `czkawka_empty_dirs`) hit the
+  cache only; they never trigger a scan. Full dumps are discouraged — query with
+  filters and limits.
+- Writes (`czkawka_scan`) are gated by `CZKAWKA_ALLOW_SCAN=1` in the server env
+  and regenerate (replace) the cache for that scope atomically.
+
+### Tools
+- `czkawka_cache_status` — binary availability, cache dir, scope counts.
+- `czkawka_scopes` — list cached scopes.
+- `czkawka_scan` — run a scoped scan (dup / big / empty-folders / empty-files / temp).
+- `czkawka_duplicates` / `czkawka_big_files` / `czkawka_empty_dirs` — read slices.
+- `czkawka_prune` — delete stale scoped caches (age + count caps).
+- `czkawka_quarantine` — move a file into the scope's quarantine folder (never
+  deletes; dry-run by default).
+
+### Workflow
+1. Check `czkawka_scopes`; if the scope you need is cached and fresh, query it.
+2. Otherwise (and only if allowed) `czkawka_scan` with the exact roots/excludes.
+3. Review duplicates/big files; `czkawka_quarantine` (dry-run first) to stage
+   removals. Permanent deletion is intentionally NOT available in the vault
+   variant — use the standalone `czkawka-cli` skill for purging.
+4. `czkawka_prune` periodically to drop stale caches.
+
+### Safety
 - The vault is context, not source of truth for code. Always verify against the actual repo/worktree before editing.
 - Do not write secrets or credentials into vault notes.
+- Quarantine, never delete, from inside the vault variant. Purging requires the
+  standalone skill with an explicit confirm token.

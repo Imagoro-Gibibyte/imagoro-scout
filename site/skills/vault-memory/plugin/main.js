@@ -350,7 +350,7 @@ function testServer(python, serverPath, vaultPath) {
       params: {
         protocolVersion: "2025-06-18",
         capabilities: {},
-        clientInfo: { name: "vault-memory-plugin", version: "1.2.0" }
+        clientInfo: { name: "vault-memory-plugin", version: "2.0.0" }
       }
     });
   });
@@ -511,271 +511,650 @@ async function createVault(parent, name) {
 }
 
 // assets/obsidian_mcp_server.py
-var obsidian_mcp_server_default = `"""
-Obsidian vault MCP server (filesystem-backed).
-
-Works with any MCP client over stdio.
-Set OBSIDIAN_VAULT to the vault folder; the server won't start without it.
-Does not require Obsidian to be running.
-"""
-from __future__ import annotations
-
-import os
-import re
-from pathlib import Path
-from typing import Optional
-
-from mcp.server.fastmcp import FastMCP
-
-if not os.environ.get("OBSIDIAN_VAULT"):
-    raise SystemExit("Set OBSIDIAN_VAULT to your vault folder (see README.md)")
-VAULT = Path(os.environ["OBSIDIAN_VAULT"]).expanduser().resolve()
-
-mcp = FastMCP(
-    "obsidian",
-    instructions=(
-        "Obsidian vault tools. "
-        f"Vault root: {VAULT}. Paths are vault-relative using forward slashes "
-        "(e.g. 'Welcome.md' or 'Folder/foo.md')."
-    ),
-)
-
-
-def _safe_path(rel: str) -> Path:
-    """Resolve a vault-relative path; block path escape."""
-    rel = (rel or "").replace("\\\\", "/").lstrip("/")
-    if not rel:
-        raise ValueError("path is required")
-    target = (VAULT / rel).resolve()
-    try:
-        target.relative_to(VAULT)
-    except ValueError as e:
-        raise ValueError(f"path escapes vault: {rel}") from e
-    return target
-
-
-def _rel(path: Path) -> str:
-    return path.relative_to(VAULT).as_posix()
-
-
-def _iter_md(max_files: int = 5000):
-    n = 0
-    for p in VAULT.rglob("*.md"):
-        if any(part.startswith(".") for part in p.relative_to(VAULT).parts):
-            # allow reading .obsidian only when explicitly path-addressed; skip in listings/search
-            continue
-        yield p
-        n += 1
-        if n >= max_files:
-            break
-
-
-@mcp.tool()
-def vault_info() -> str:
-    """Return vault path and basic stats (note counts, top-level folders)."""
-    if not VAULT.exists():
-        return f"Vault missing: {VAULT}"
-    notes = list(_iter_md())
-    tops = sorted(
-        [p.name + ("/" if p.is_dir() else "") for p in VAULT.iterdir() if not p.name.startswith(".")]
-    )
-    return (
-        f"vault: {VAULT}\\n"
-        f"markdown_notes: {len(notes)}\\n"
-        f"top_level: {', '.join(tops[:40])}"
-    )
-
-
-@mcp.tool()
-def list_notes(path: str = "", recursive: bool = True, limit: int = 200) -> str:
-    """List markdown notes under a vault-relative folder (default: vault root)."""
-    root = VAULT if not path else _safe_path(path)
-    if not root.exists():
-        return f"Not found: {path or '/'}"
-    if root.is_file():
-        return _rel(root)
-    items = []
-    if recursive:
-        for p in root.rglob("*.md"):
-            if any(part.startswith(".") for part in p.relative_to(VAULT).parts):
-                continue
-            items.append(_rel(p))
-            if len(items) >= limit:
-                break
-    else:
-        for p in sorted(root.iterdir()):
-            if p.name.startswith("."):
-                continue
-            if p.is_dir():
-                items.append(_rel(p) + "/")
-            elif p.suffix.lower() == ".md":
-                items.append(_rel(p))
-            if len(items) >= limit:
-                break
-    return "\\n".join(items) if items else "(empty)"
-
-
-@mcp.tool()
-def read_note(path: str) -> str:
-    """Read a note's full markdown content by vault-relative path."""
-    p = _safe_path(path)
-    if not p.exists():
-        return f"ERROR: note not found: {path}"
-    if not p.is_file():
-        return f"ERROR: not a file: {path}"
-    text = p.read_text(encoding="utf-8", errors="replace")
-    return f"--- path: {_rel(p)} ---\\n{text}"
-
-
-@mcp.tool()
-def write_note(path: str, content: str, overwrite: bool = False) -> str:
-    """Create or overwrite a markdown note. Refuses overwrite unless overwrite=true."""
-    p = _safe_path(path)
-    if p.exists() and not overwrite:
-        return (
-            f"ERROR: exists (set overwrite=true to replace): {_rel(p)}. "
-            "Use append_note or patch-style edit instead."
-        )
-    p.parent.mkdir(parents=True, exist_ok=True)
-    if not str(p).lower().endswith(".md"):
-        # still allow non-md if user insists, but default to .md
-        pass
-    p.write_text(content, encoding="utf-8")
-    return f"Wrote {_rel(p)} ({len(content.splitlines())} lines, {p.stat().st_size} bytes)"
-
-
-@mcp.tool()
-def append_note(path: str, content: str, create_if_missing: bool = True) -> str:
-    """Append markdown to a note (creates file if missing when create_if_missing=true)."""
-    p = _safe_path(path)
-    if not p.exists():
-        if not create_if_missing:
-            return f"ERROR: missing: {path}"
-        p.parent.mkdir(parents=True, exist_ok=True)
-        existing = ""
-    else:
-        existing = p.read_text(encoding="utf-8", errors="replace")
-    sep = "" if not existing or existing.endswith("\\n") else "\\n"
-    new = existing + sep + content
-    if not content.endswith("\\n"):
-        new += "\\n"
-    p.write_text(new, encoding="utf-8")
-    return f"Appended to {_rel(p)} (now {p.stat().st_size} bytes)"
-
-
-@mcp.tool()
-def search_notes(query: str, limit: int = 25, case_sensitive: bool = False) -> str:
-    """Full-text search across markdown notes. Returns path + matching line snippets."""
-    if not query or not query.strip():
-        return "ERROR: query required"
-    flags = 0 if case_sensitive else re.IGNORECASE
-    try:
-        rx = re.compile(re.escape(query) if len(query) < 3 else query, flags)
-    except re.error:
-        rx = re.compile(re.escape(query), flags)
-
-    hits = []
-    for p in _iter_md():
-        try:
-            text = p.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        matched_lines = []
-        for i, line in enumerate(text.splitlines(), 1):
-            if rx.search(line):
-                matched_lines.append(f"  L{i}: {line.strip()[:200]}")
-                if len(matched_lines) >= 5:
-                    break
-        if matched_lines:
-            hits.append(f"{_rel(p)}\\n" + "\\n".join(matched_lines))
-            if len(hits) >= limit:
-                break
-    if not hits:
-        return f"No matches for: {query!r}"
-    return f"Found {len(hits)} note(s) for {query!r}:\\n\\n" + "\\n\\n".join(hits)
-
-
-@mcp.tool()
-def list_tags(limit: int = 100) -> str:
-    """Scan vault for #tags and frontmatter tags; return counts."""
-    tag_re = re.compile(r"(?<!\\w)#([A-Za-z0-9_/\\-]+)")
-    counts: dict[str, int] = {}
-    for p in _iter_md():
-        try:
-            text = p.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        # strip fenced code roughly
-        body = re.sub(r"\`\`\`.*?\`\`\`", "", text, flags=re.S)
-        for m in tag_re.finditer(body):
-            t = m.group(1).lower()
-            counts[t] = counts.get(t, 0) + 1
-        # frontmatter tags:
-        if body.startswith("---"):
-            end = body.find("\\n---", 3)
-            if end > 0:
-                fm = body[3:end]
-                for m in re.finditer(r"(?m)^\\s*-\\s*([A-Za-z0-9_/\\-]+)\\s*$", fm):
-                    # only count if under a tags: key roughly \u2014 still useful
-                    t = m.group(1).lower()
-                    counts[t] = counts.get(t, 0) + 1
-                m2 = re.search(r"(?mi)^tags:\\s*\\[([^\\]]*)\\]", fm)
-                if m2:
-                    for part in m2.group(1).split(","):
-                        t = part.strip().strip("\\"'").lower()
-                        if t:
-                            counts[t] = counts.get(t, 0) + 1
-    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
-    if not ranked:
-        return "No tags found"
-    return "\\n".join(f"#{t}  {n}" for t, n in ranked)
-
-
-@mcp.tool()
-def daily_note(date: Optional[str] = None, content: Optional[str] = None, append: bool = True) -> str:
-    """Read or write the daily note. date=YYYY-MM-DD (default today local). If content set, write/append."""
-    from datetime import datetime
-
-    if not date:
-        date = datetime.now().strftime("%Y-%m-%d")
-    # Prefer existing patterns in this vault
-    candidates = [
-        VAULT / f"{date}.md",
-        VAULT / "daily" / f"{date}.md",
-        VAULT / "Daily" / f"{date}.md",
-        VAULT / "Journal" / f"{date}.md",
-    ]
-    target = None
-    for c in candidates:
-        if c.exists():
-            target = c
-            break
-    if target is None:
-        target = candidates[0]
-
-    if content is None:
-        if not target.exists():
-            return f"No daily note yet for {date} (would be {_rel(target)})"
-        return f"--- path: {_rel(target)} ---\\n" + target.read_text(encoding="utf-8", errors="replace")
-
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if target.exists() and append:
-        existing = target.read_text(encoding="utf-8", errors="replace")
-        sep = "" if existing.endswith("\\n") else "\\n"
-        target.write_text(existing + sep + content + ("" if content.endswith("\\n") else "\\n"), encoding="utf-8")
-        return f"Appended to {_rel(target)}"
-    header = f"# {date}\\n\\n" if not target.exists() else ""
-    target.write_text(header + content + ("" if content.endswith("\\n") else "\\n"), encoding="utf-8")
-    return f"Wrote {_rel(target)}"
-
-
-if __name__ == "__main__":
-    if not VAULT.exists():
-        raise SystemExit(f"OBSIDIAN_VAULT does not exist: {VAULT}")
+var obsidian_mcp_server_default = `"""\r
+Obsidian vault MCP server (filesystem-backed).\r
+\r
+Works with any MCP client over stdio.\r
+Set OBSIDIAN_VAULT to the vault folder; the server won't start without it.\r
+Does not require Obsidian to be running.\r
+"""\r
+from __future__ import annotations\r
+\r
+import os\r
+import re\r
+from pathlib import Path\r
+from typing import Optional\r
+\r
+from mcp.server.fastmcp import FastMCP\r
+\r
+if not os.environ.get("OBSIDIAN_VAULT"):\r
+    raise SystemExit("Set OBSIDIAN_VAULT to your vault folder (see README.md)")\r
+VAULT = Path(os.environ["OBSIDIAN_VAULT"]).expanduser().resolve()\r
+\r
+mcp = FastMCP(\r
+    "obsidian",\r
+    instructions=(\r
+        "Obsidian vault tools. "\r
+        f"Vault root: {VAULT}. Paths are vault-relative using forward slashes "\r
+        "(e.g. 'Welcome.md' or 'Folder/foo.md')."\r
+    ),\r
+)\r
+\r
+\r
+def _safe_path(rel: str) -> Path:\r
+    """Resolve a vault-relative path; block path escape."""\r
+    rel = (rel or "").replace("\\\\", "/").lstrip("/")\r
+    if not rel:\r
+        raise ValueError("path is required")\r
+    target = (VAULT / rel).resolve()\r
+    try:\r
+        target.relative_to(VAULT)\r
+    except ValueError as e:\r
+        raise ValueError(f"path escapes vault: {rel}") from e\r
+    return target\r
+\r
+\r
+def _rel(path: Path) -> str:\r
+    return path.relative_to(VAULT).as_posix()\r
+\r
+\r
+def _iter_md(max_files: int = 5000):\r
+    n = 0\r
+    for p in VAULT.rglob("*.md"):\r
+        if any(part.startswith(".") for part in p.relative_to(VAULT).parts):\r
+            # allow reading .obsidian only when explicitly path-addressed; skip in listings/search\r
+            continue\r
+        yield p\r
+        n += 1\r
+        if n >= max_files:\r
+            break\r
+\r
+\r
+@mcp.tool()\r
+def vault_info() -> str:\r
+    """Return vault path and basic stats (note counts, top-level folders)."""\r
+    if not VAULT.exists():\r
+        return f"Vault missing: {VAULT}"\r
+    notes = list(_iter_md())\r
+    tops = sorted(\r
+        [p.name + ("/" if p.is_dir() else "") for p in VAULT.iterdir() if not p.name.startswith(".")]\r
+    )\r
+    return (\r
+        f"vault: {VAULT}\\n"\r
+        f"markdown_notes: {len(notes)}\\n"\r
+        f"top_level: {', '.join(tops[:40])}"\r
+    )\r
+\r
+\r
+@mcp.tool()\r
+def list_notes(path: str = "", recursive: bool = True, limit: int = 200) -> str:\r
+    """List markdown notes under a vault-relative folder (default: vault root)."""\r
+    root = VAULT if not path else _safe_path(path)\r
+    if not root.exists():\r
+        return f"Not found: {path or '/'}"\r
+    if root.is_file():\r
+        return _rel(root)\r
+    items = []\r
+    if recursive:\r
+        for p in root.rglob("*.md"):\r
+            if any(part.startswith(".") for part in p.relative_to(VAULT).parts):\r
+                continue\r
+            items.append(_rel(p))\r
+            if len(items) >= limit:\r
+                break\r
+    else:\r
+        for p in sorted(root.iterdir()):\r
+            if p.name.startswith("."):\r
+                continue\r
+            if p.is_dir():\r
+                items.append(_rel(p) + "/")\r
+            elif p.suffix.lower() == ".md":\r
+                items.append(_rel(p))\r
+            if len(items) >= limit:\r
+                break\r
+    return "\\n".join(items) if items else "(empty)"\r
+\r
+\r
+@mcp.tool()\r
+def read_note(path: str) -> str:\r
+    """Read a note's full markdown content by vault-relative path."""\r
+    p = _safe_path(path)\r
+    if not p.exists():\r
+        return f"ERROR: note not found: {path}"\r
+    if not p.is_file():\r
+        return f"ERROR: not a file: {path}"\r
+    text = p.read_text(encoding="utf-8", errors="replace")\r
+    return f"--- path: {_rel(p)} ---\\n{text}"\r
+\r
+\r
+@mcp.tool()\r
+def write_note(path: str, content: str, overwrite: bool = False) -> str:\r
+    """Create or overwrite a markdown note. Refuses overwrite unless overwrite=true."""\r
+    p = _safe_path(path)\r
+    if p.exists() and not overwrite:\r
+        return (\r
+            f"ERROR: exists (set overwrite=true to replace): {_rel(p)}. "\r
+            "Use append_note or patch-style edit instead."\r
+        )\r
+    p.parent.mkdir(parents=True, exist_ok=True)\r
+    if not str(p).lower().endswith(".md"):\r
+        # still allow non-md if user insists, but default to .md\r
+        pass\r
+    p.write_text(content, encoding="utf-8")\r
+    return f"Wrote {_rel(p)} ({len(content.splitlines())} lines, {p.stat().st_size} bytes)"\r
+\r
+\r
+@mcp.tool()\r
+def append_note(path: str, content: str, create_if_missing: bool = True) -> str:\r
+    """Append markdown to a note (creates file if missing when create_if_missing=true)."""\r
+    p = _safe_path(path)\r
+    if not p.exists():\r
+        if not create_if_missing:\r
+            return f"ERROR: missing: {path}"\r
+        p.parent.mkdir(parents=True, exist_ok=True)\r
+        existing = ""\r
+    else:\r
+        existing = p.read_text(encoding="utf-8", errors="replace")\r
+    sep = "" if not existing or existing.endswith("\\n") else "\\n"\r
+    new = existing + sep + content\r
+    if not content.endswith("\\n"):\r
+        new += "\\n"\r
+    p.write_text(new, encoding="utf-8")\r
+    return f"Appended to {_rel(p)} (now {p.stat().st_size} bytes)"\r
+\r
+\r
+@mcp.tool()\r
+def search_notes(query: str, limit: int = 25, case_sensitive: bool = False) -> str:\r
+    """Full-text search across markdown notes. Returns path + matching line snippets."""\r
+    if not query or not query.strip():\r
+        return "ERROR: query required"\r
+    flags = 0 if case_sensitive else re.IGNORECASE\r
+    try:\r
+        rx = re.compile(re.escape(query) if len(query) < 3 else query, flags)\r
+    except re.error:\r
+        rx = re.compile(re.escape(query), flags)\r
+\r
+    hits = []\r
+    for p in _iter_md():\r
+        try:\r
+            text = p.read_text(encoding="utf-8", errors="replace")\r
+        except OSError:\r
+            continue\r
+        matched_lines = []\r
+        for i, line in enumerate(text.splitlines(), 1):\r
+            if rx.search(line):\r
+                matched_lines.append(f"  L{i}: {line.strip()[:200]}")\r
+                if len(matched_lines) >= 5:\r
+                    break\r
+        if matched_lines:\r
+            hits.append(f"{_rel(p)}\\n" + "\\n".join(matched_lines))\r
+            if len(hits) >= limit:\r
+                break\r
+    if not hits:\r
+        return f"No matches for: {query!r}"\r
+    return f"Found {len(hits)} note(s) for {query!r}:\\n\\n" + "\\n\\n".join(hits)\r
+\r
+\r
+@mcp.tool()\r
+def list_tags(limit: int = 100) -> str:\r
+    """Scan vault for #tags and frontmatter tags; return counts."""\r
+    tag_re = re.compile(r"(?<!\\w)#([A-Za-z0-9_/\\-]+)")\r
+    counts: dict[str, int] = {}\r
+    for p in _iter_md():\r
+        try:\r
+            text = p.read_text(encoding="utf-8", errors="replace")\r
+        except OSError:\r
+            continue\r
+        # strip fenced code roughly\r
+        body = re.sub(r"\`\`\`.*?\`\`\`", "", text, flags=re.S)\r
+        for m in tag_re.finditer(body):\r
+            t = m.group(1).lower()\r
+            counts[t] = counts.get(t, 0) + 1\r
+        # frontmatter tags:\r
+        if body.startswith("---"):\r
+            end = body.find("\\n---", 3)\r
+            if end > 0:\r
+                fm = body[3:end]\r
+                for m in re.finditer(r"(?m)^\\s*-\\s*([A-Za-z0-9_/\\-]+)\\s*$", fm):\r
+                    # only count if under a tags: key roughly \u2014 still useful\r
+                    t = m.group(1).lower()\r
+                    counts[t] = counts.get(t, 0) + 1\r
+                m2 = re.search(r"(?mi)^tags:\\s*\\[([^\\]]*)\\]", fm)\r
+                if m2:\r
+                    for part in m2.group(1).split(","):\r
+                        t = part.strip().strip("\\"'").lower()\r
+                        if t:\r
+                            counts[t] = counts.get(t, 0) + 1\r
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]\r
+    if not ranked:\r
+        return "No tags found"\r
+    return "\\n".join(f"#{t}  {n}" for t, n in ranked)\r
+\r
+\r
+@mcp.tool()\r
+def daily_note(date: Optional[str] = None, content: Optional[str] = None, append: bool = True) -> str:\r
+    """Read or write the daily note. date=YYYY-MM-DD (default today local). If content set, write/append."""\r
+    from datetime import datetime\r
+\r
+    if not date:\r
+        date = datetime.now().strftime("%Y-%m-%d")\r
+    # Prefer existing patterns in this vault\r
+    candidates = [\r
+        VAULT / f"{date}.md",\r
+        VAULT / "daily" / f"{date}.md",\r
+        VAULT / "Daily" / f"{date}.md",\r
+        VAULT / "Journal" / f"{date}.md",\r
+    ]\r
+    target = None\r
+    for c in candidates:\r
+        if c.exists():\r
+            target = c\r
+            break\r
+    if target is None:\r
+        target = candidates[0]\r
+\r
+    if content is None:\r
+        if not target.exists():\r
+            return f"No daily note yet for {date} (would be {_rel(target)})"\r
+        return f"--- path: {_rel(target)} ---\\n" + target.read_text(encoding="utf-8", errors="replace")\r
+\r
+    target.parent.mkdir(parents=True, exist_ok=True)\r
+    if target.exists() and append:\r
+        existing = target.read_text(encoding="utf-8", errors="replace")\r
+        sep = "" if existing.endswith("\\n") else "\\n"\r
+        target.write_text(existing + sep + content + ("" if content.endswith("\\n") else "\\n"), encoding="utf-8")\r
+        return f"Appended to {_rel(target)}"\r
+    header = f"# {date}\\n\\n" if not target.exists() else ""\r
+    target.write_text(header + content + ("" if content.endswith("\\n") else "\\n"), encoding="utf-8")\r
+    return f"Wrote {_rel(target)}"\r
+\r
+\r
+# ---------------------------------------------------------------------------\r
+# Czkawka scoped cache (precached JSON payloads)\r
+#\r
+# Instead of running a full czkawka search on every agent turn, scans are run\r
+# once per *scope* (mode + roots + exclusions) and the result is cached as a\r
+# scoped JSON file under the cache directory. Agents read the cache; scans only\r
+# happen on an explicit czkawka_scan / refresh. This keeps large system scans\r
+# out of the agent's context and makes repeated queries cheap.\r
+# ---------------------------------------------------------------------------\r
+import hashlib\r
+import json as _json\r
+import os as _os\r
+import shutil as _shutil\r
+import subprocess as _subprocess\r
+import tempfile as _tempfile\r
+from datetime import datetime, timezone\r
+\r
+CZKAWKA_CLI = _os.environ.get("CZKAWKA_CLI", "czkawka_cli")\r
+CZKAWKA_CACHE_DIR = Path(\r
+    _os.environ.get("CZKAWKA_CACHE_DIR", str(VAULT / "Project Plans" / "Czkawka"))\r
+)\r
+CZKAWKA_ALLOW_SCAN = _os.environ.get("CZKAWKA_ALLOW_SCAN", "").lower() in ("1", "true", "yes")\r
+CZKAWKA_PRUNE_DAYS = int(_os.environ.get("CZKAWKA_PRUNE_DAYS", "14"))\r
+CZKAWKA_PRUNE_COUNT = int(_os.environ.get("CZKAWKA_PRUNE_COUNT", "20"))\r
+CZKAWKA_QUARANTINE = CZKAWKA_CACHE_DIR / "quarantine"\r
+\r
+\r
+def _ensure_cache_dir() -> None:\r
+    CZKAWKA_CACHE_DIR.mkdir(parents=True, exist_ok=True)\r
+\r
+\r
+def _index_path() -> Path:\r
+    return CZKAWKA_CACHE_DIR / "index.json"\r
+\r
+\r
+def _load_index() -> dict:\r
+    p = _index_path()\r
+    if not p.exists():\r
+        return {"scopes": {}}\r
+    try:\r
+        return _json.loads(p.read_text(encoding="utf-8"))\r
+    except (OSError, ValueError):\r
+        return {"scopes": {}}\r
+\r
+\r
+def _save_index(index: dict) -> None:\r
+    _ensure_cache_dir()\r
+    target = _index_path()\r
+    fd, tmp = _tempfile.mkstemp(prefix=".index.", dir=str(CZKAWKA_CACHE_DIR))\r
+    try:\r
+        with _os.fdopen(fd, "w", encoding="utf-8") as f:\r
+            _json.dump(index, f, indent=2)\r
+            f.write("\\n")\r
+        _os.replace(tmp, target)\r
+    finally:\r
+        try:\r
+            _os.remove(tmp)\r
+        except OSError:\r
+            pass\r
+\r
+\r
+def _scope_slug(mode: str, roots: list[str], excludes: list[str]) -> str:\r
+    key = _json.dumps({"mode": mode, "roots": sorted(roots), "excludes": sorted(excludes)}, sort_keys=True)\r
+    h = hashlib.sha256(key.encode("utf-8")).hexdigest()[:8]\r
+    base = (mode + "-" + (roots[0] if roots else "noroot").replace("\\\\", "/").rsplit("/", 1)[-1])[:24]\r
+    base = "".join(c if c.isalnum() or c in "-_" else "-" for c in base).strip("-") or "scope"\r
+    return f"{base}-{h}"\r
+\r
+\r
+def _cache_path(slug: str) -> Path:\r
+    return CZKAWKA_CACHE_DIR / f"cache.{slug}.json"\r
+\r
+\r
+def _lock_path(slug: str) -> Path:\r
+    return CZKAWKA_CACHE_DIR / f".{slug}.lock"\r
+\r
+\r
+def _read_cache(slug: str) -> tuple[dict | None, str]:\r
+    p = _cache_path(slug)\r
+    if not p.exists():\r
+        return None, f"ERROR: cache not found for scope {slug!r} ({p})"\r
+    try:\r
+        return _json.loads(p.read_text(encoding="utf-8")), str(p)\r
+    except (OSError, ValueError) as e:\r
+        return None, f"ERROR: could not read cache {p}: {e}"\r
+\r
+\r
+def _czkawka_available() -> bool:\r
+    return _shutil.which(CZKAWKA_CLI) is not None\r
+\r
+\r
+@mcp.tool()\r
+def czkawka_cache_status() -> str:\r
+    """Return cache directory, binary availability, and scope counts."""\r
+    _ensure_cache_dir()\r
+    index = _load_index()\r
+    scopes = index.get("scopes", {})\r
+    lines = [\r
+        f"czkawka_cli: {CZKAWKA_CLI} ({'found' if _czkawka_available() else 'NOT FOUND'})",\r
+        f"cache_dir: {CZKAWKA_CACHE_DIR}",\r
+        f"allow_scan: {CZKAWKA_ALLOW_SCAN}",\r
+        f"prune_days: {CZKAWKA_PRUNE_DAYS}",\r
+        f"prune_count: {CZKAWKA_PRUNE_COUNT}",\r
+        f"scopes: {len(scopes)}",\r
+    ]\r
+    for slug, meta in scopes.items():\r
+        lines.append(\r
+            f"  {slug}: mode={meta.get('mode')} roots={meta.get('roots')} "\r
+            f"mtime={meta.get('mtime')} entries={meta.get('entries')}"\r
+        )\r
+    return "\\n".join(lines)\r
+\r
+\r
+@mcp.tool()\r
+def czkawka_scopes() -> str:\r
+    """List cached scopes (slug, mode, roots, mtime, entry count)."""\r
+    _ensure_cache_dir()\r
+    index = _load_index()\r
+    scopes = index.get("scopes", {})\r
+    if not scopes:\r
+        return "(no cached scopes; run czkawka_scan to create one)"\r
+    out = []\r
+    for slug, meta in scopes.items():\r
+        out.append(\r
+            f"{slug}\\tmode={meta.get('mode')}\\troots={','.join(meta.get('roots', []))}\\t"\r
+            f"mtime={meta.get('mtime')}\\tentries={meta.get('entries')}"\r
+        )\r
+    return "\\n".join(out)\r
+\r
+\r
+@mcp.tool()\r
+def czkawka_scan(\r
+    mode: str = "dup",\r
+    roots: str = "",\r
+    excludes: str = "",\r
+    min_size: int = 8192,\r
+    limit_files: int = 0,\r
+    dry_run: bool = True,\r
+) -> str:\r
+    """Run czkawka_cli for one scope and cache the result as a scoped JSON.\r
+\r
+    mode: dup | big | empty-folders | empty-files | temp\r
+    roots: comma-separated absolute directories to scan\r
+    excludes: comma-separated directories to exclude\r
+    Only runs if CZKAWKA_ALLOW_SCAN is enabled; otherwise returns a refusal.\r
+    Regenerates (replaces) any existing cache for the same scope.\r
+    """\r
+    if not CZKAWKA_ALLOW_SCAN:\r
+        return (\r
+            "ERROR: scanning disabled. Set CZKAWKA_ALLOW_SCAN=1 in the server env to enable "\r
+            "czkawka_scan. Reads from existing caches are always available."\r
+        )\r
+    if not _czkawka_available():\r
+        return f"ERROR: czkawka_cli not found ({CZKAWKA_CLI}). Install it and set CZKAWKA_CLI."\r
+    root_list = [r.strip() for r in roots.split(",") if r.strip()]\r
+    if not root_list:\r
+        return "ERROR: at least one root directory is required"\r
+    exclude_list = [e.strip() for e in excludes.split(",") if e.strip()]\r
+    mode = mode.strip().lower()\r
+    if mode not in ("dup", "big", "empty-folders", "empty-files", "temp"):\r
+        return f"ERROR: unsupported mode {mode!r}"\r
+    slug = _scope_slug(mode, root_list, exclude_list)\r
+    _ensure_cache_dir()\r
+    lock = _lock_path(slug)\r
+    # simple lock\r
+    try:\r
+        fd = _os.open(str(lock), _os.O_CREAT | _os.O_EXCL | _os.O_WRONLY)\r
+        _os.close(fd)\r
+    except FileExistsError:\r
+        return f"ERROR: scan already in progress for scope {slug}"\r
+    try:\r
+        cache = _cache_path(slug)\r
+        # delete prior cache for regeneration\r
+        try:\r
+            cache.unlink(missing_ok=True)\r
+        except OSError:\r
+            pass\r
+        cmd = [CZKAWKA_CLI, mode]\r
+        for r in root_list:\r
+            cmd += ["-d", r]\r
+        for e in exclude_list:\r
+            cmd += ["-e", e]\r
+        cmd += ["-C", str(cache), "-N", "-M"]\r
+        if mode == "dup":\r
+            cmd += ["-m", str(min_size)]\r
+        elif mode == "big":\r
+            cmd += ["-n", str(limit_files or 1000)]\r
+        proc = _subprocess.run(cmd, capture_output=True, text=True, timeout=3600)\r
+        if proc.returncode not in (0, 11):\r
+            return f"ERROR: czkawka_cli failed (rc={proc.returncode}): {proc.stderr.strip()[:500]}"\r
+        # count entries\r
+        entries = 0\r
+        try:\r
+            data = _json.loads(cache.read_text(encoding="utf-8"))\r
+            if isinstance(data, list):\r
+                entries = len(data)\r
+            elif isinstance(data, dict):\r
+                # czkawka dup schema: {size: [[{path,...}, ...], ...]}\r
+                for v in data.values():\r
+                    if isinstance(v, list):\r
+                        entries += len(v)\r
+                if entries == 0:\r
+                    entries = len(data)\r
+        except (OSError, ValueError):\r
+            entries = -1\r
+        index = _load_index()\r
+        index.setdefault("scopes", {})[slug] = {\r
+            "mode": mode,\r
+            "roots": root_list,\r
+            "excludes": exclude_list,\r
+            "mtime": datetime.now(timezone.utc).isoformat(),\r
+            "entries": entries,\r
+            "cache": str(cache.relative_to(VAULT)),\r
+        }\r
+        _save_index(index)\r
+        return (\r
+            f"Scanned scope {slug}: mode={mode} roots={root_list} entries={entries} "\r
+            f"cache={cache}"\r
+        )\r
+    finally:\r
+        try:\r
+            lock.unlink(missing_ok=True)\r
+        except OSError:\r
+            pass\r
+\r
+\r
+@mcp.tool()\r
+def czkawka_duplicates(scope: str, path_contains: str = "", min_size: int = 0, limit: int = 50) -> str:\r
+    """Read duplicate groups from a cached scope. Returns slices, not the whole cache."""\r
+    data, info = _read_cache(scope)\r
+    if data is None:\r
+        return info\r
+    # czkawka dup schema: {size_str: [[{path, size, hash, modified_date}, ...], ...]}\r
+    groups = []\r
+    if isinstance(data, dict):\r
+        for size_key, grp_list in data.items():\r
+            if not isinstance(grp_list, list):\r
+                continue\r
+            for grp in grp_list:\r
+                if isinstance(grp, list) and len(grp) >= 2:\r
+                    groups.append(grp)\r
+    elif isinstance(data, list):\r
+        groups = [g for g in data if isinstance(g, list) and len(g) >= 2]\r
+    out = []\r
+    shown = 0\r
+    for grp in groups:\r
+        files = [ (g.get("path") if isinstance(g, dict) else str(g)) for g in grp ]\r
+        size = grp[0].get("size") if (grp and isinstance(grp[0], dict)) else None\r
+        hsh = grp[0].get("hash") if (grp and isinstance(grp[0], dict)) else None\r
+        if min_size and size is not None and int(size) < min_size:\r
+            continue\r
+        if path_contains:\r
+            files = [f for f in files if path_contains.lower() in str(f).lower()]\r
+        if not files or len(files) < 2:\r
+            continue\r
+        out.append(f"group size={size} hash={str(hsh)[:12]}")\r
+        for f in files[:10]:\r
+            out.append(f"  {f}")\r
+        if len(files) > 10:\r
+            out.append(f"  ... +{len(files) - 10} more")\r
+        shown += 1\r
+        if shown >= limit:\r
+            break\r
+    if not out:\r
+        return f"No duplicate groups matching filters in scope {scope!r}."\r
+    out.insert(0, f"scope={scope} groups_shown={shown} (limit={limit})")\r
+    return "\\n".join(out)\r
+\r
+\r
+@mcp.tool()\r
+def czkawka_big_files(scope: str, limit: int = 25) -> str:\r
+    """Read the biggest files from a cached scope."""\r
+    data, info = _read_cache(scope)\r
+    if data is None:\r
+        return info\r
+    items = data if isinstance(data, list) else data.get("big_files", data.get("BigFiles", []))\r
+    if not isinstance(items, list):\r
+        items = []\r
+    items = sorted(items, key=lambda x: int(x.get("size", x.get("Size", 0)) or 0), reverse=True)[:limit]\r
+    out = [f"scope={scope} top={len(items)}"]\r
+    for it in items:\r
+        out.append(f"{it.get('size', it.get('Size'))}\\t{it.get('path', it.get('Path', it.get('name', '')))}")\r
+    return "\\n".join(out) if len(out) > 1 else f"No big files in scope {scope!r}."\r
+\r
+\r
+@mcp.tool()\r
+def czkawka_empty_dirs(scope: str, limit: int = 100) -> str:\r
+    """Read empty directories from a cached scope."""\r
+    data, info = _read_cache(scope)\r
+    if data is None:\r
+        return info\r
+    items = data if isinstance(data, list) else data.get("empty_folders", data.get("EmptyFolders", []))\r
+    if not isinstance(items, list):\r
+        items = []\r
+    out = [f"scope={scope} count={len(items)} (showing {min(limit, len(items))})"]\r
+    for it in items[:limit]:\r
+        out.append(str(it.get("path", it.get("Path", it)) if isinstance(it, dict) else it))\r
+    return "\\n".join(out)\r
+\r
+\r
+@mcp.tool()\r
+def czkawka_prune(older_than_days: int = 0, max_scopes: int = 0) -> str:\r
+    """Delete stale scoped caches. Defaults to CZKAWKA_PRUNE_DAYS / CZKAWKA_PRUNE_COUNT."""\r
+    days = older_than_days or CZKAWKA_PRUNE_DAYS\r
+    cap = max_scopes or CZKAWKA_PRUNE_COUNT\r
+    _ensure_cache_dir()\r
+    index = _load_index()\r
+    scopes = index.get("scopes", {})\r
+    now = datetime.now(timezone.utc)\r
+    removed = []\r
+    # age-based\r
+    for slug, meta in list(scopes.items()):\r
+        mtime = meta.get("mtime")\r
+        try:\r
+            mt = datetime.fromisoformat(mtime.replace("Z", "+00:00")) if mtime else None\r
+        except (AttributeError, ValueError):\r
+            mt = None\r
+        if mt is not None and (now - mt).days >= days:\r
+            p = _cache_path(slug)\r
+            try:\r
+                p.unlink(missing_ok=True)\r
+            except OSError:\r
+                pass\r
+            removed.append(slug)\r
+            scopes.pop(slug, None)\r
+    # count-based\r
+    if len(scopes) > cap:\r
+        ordered = sorted(scopes.items(), key=lambda kv: kv[1].get("mtime", ""), reverse=True)\r
+        for slug, _ in ordered[cap:]:\r
+            p = _cache_path(slug)\r
+            try:\r
+                p.unlink(missing_ok=True)\r
+            except OSError:\r
+                pass\r
+            removed.append(slug)\r
+            scopes.pop(slug, None)\r
+    index["scopes"] = scopes\r
+    _save_index(index)\r
+    return f"Pruned {len(removed)} scope(s): {removed}" if removed else "Nothing to prune."\r
+\r
+\r
+@mcp.tool()\r
+def czkawka_quarantine(scope: str, path: str, dry_run: bool = True) -> str:\r
+    """Move a file into the quarantine folder for that scope (never deletes).\r
+\r
+    dry_run=True (default) reports what would happen without moving anything.\r
+    """\r
+    import shutil as _sh\r
+    src = Path(path)\r
+    if not src.exists() or not src.is_file():\r
+        return f"ERROR: file not found: {path}"\r
+    try:\r
+        src.resolve().relative_to(VAULT)\r
+    except ValueError:\r
+        # allow quarantining files outside vault only if explicitly under an allowed root;\r
+        # here we require the path to be inside the vault for safety.\r
+        return f"ERROR: path must be inside the vault for quarantine via this server: {path}"\r
+    dest_dir = CZKAWKA_QUARANTINE / scope\r
+    dest = dest_dir / src.name\r
+    if dry_run:\r
+        return f"DRY RUN: would move {src} -> {dest}"\r
+    dest_dir.mkdir(parents=True, exist_ok=True)\r
+    # avoid clobber\r
+    n = 2\r
+    while dest.exists():\r
+        dest = dest_dir / f"{src.stem} ({n}){src.suffix}"\r
+        n += 1\r
+    _sh.move(str(src), str(dest))\r
+    # manifest\r
+    manifest = dest_dir / "manifest.json"\r
+    try:\r
+        data = _json.loads(manifest.read_text()) if manifest.exists() else {"moved": []}\r
+    except (OSError, ValueError):\r
+        data = {"moved": []}\r
+    data["moved"].append({"from": str(src), "to": str(dest), "at": datetime.now(timezone.utc).isoformat()})\r
+    manifest.write_text(_json.dumps(data, indent=2))\r
+    return f"Quarantined: {src} -> {dest}"\r
+\r
+\r
+if __name__ == "__main__":\r
+    if not VAULT.exists():\r
+        raise SystemExit(f"OBSIDIAN_VAULT does not exist: {VAULT}")\r
     mcp.run(transport="stdio")`;
 
 // assets/SKILL.md
-var SKILL_default = '---\nname: vault-memory\ndescription: Use the Obsidian vault as agentic memory. Before answering project, worktree, or planning questions, search the vault for relevant notes; prefer vault summaries and status notes over raw repo files; sort and filter by project, date range, and status. Use at the start of repo/worktree tasks and when asked about plans, status, history, or next steps.\n---\n\n# Vault Memory\n\n## Purpose\nThe Obsidian vault (`<VAULT>`) is the human-readable memory layer for this workspace. Use it to recover context, decisions, and status before acting on a repo or worktree.\n\n## When to use\n- At the start of any task involving a repo, worktree, branch, or project.\n- When asked about plans, status, history, or "what\'s been done".\n- Before proposing changes, to align with documented decisions and rules.\n- When a worktree or branch name is mentioned.\n\n## How to query the vault\n- Use `brain.search_notes` with the project name, repo name, branch name, or worktree directory name.\n- Use `brain.list_notes` under `Project Plans/<Project>` to find plan/status notes.\n- Read the newest status note first (date is in the folder/note name).\n- Use `brain.read_note` for full content when a note is relevant.\n- Check `Project Plans/_Worktrees/Registry.md` for repo/worktree mapping.\n- Check `Project Plans/_Worktrees/Prompts.md` for suggested next steps.\n- If the `brain.*` tools are not available, read the vault as plain Markdown files: grep/search under `<VAULT>` and read the matching `.md` files directly.\n\n## Sorting and filtering guidance\n- Prefer notes under `Project Plans/<Project>/<date range>/`.\n- Status notes (`*- status.md`) are the source of truth for current state.\n- `AGENTS.md` / `RULES.md` copies are contracts, not status.\n- `Imported Local Docs/` contains repo-level docs not otherwise in the vault.\n- Worktree directory names and branch names are searchable keys.\n- If multiple notes match, prefer the most recent date and the one whose title matches the repo/project exactly.\n\n## Output expectations\n- Cite vault note paths in answers when relying on them.\n- If no vault note exists for the topic, say so explicitly and suggest importing the relevant local doc.\n- Do not paste large raw repo files when a vault summary exists.\n\n## Safety\n- The vault is context, not source of truth for code. Always verify against the actual repo/worktree before editing.\n- Do not write secrets or credentials into vault notes.\n';
+var SKILL_default = "---\r\nname: vault-memory\r\ndescription: Use the Obsidian vault as agentic memory. Before answering project, worktree, or planning questions, search the vault for relevant notes; prefer vault summaries and status notes over raw repo files; sort and filter by project, date range, and status. Use at the start of repo/worktree tasks and when asked about plans, status, history, or next steps.\r\n---\r\n\r\n# Vault Memory\r\n\r\n## Purpose\r\nThe Obsidian vault (`<VAULT>`) is the human-readable memory layer for this workspace. Use it to recover context, decisions, and status before acting on a repo or worktree.\r\n\r\n## When to use\r\n- At the start of any task involving a repo, worktree, branch, or project.\r\n- When asked about plans, status, history, or \"what's been done\".\r\n- Before proposing changes, to align with documented decisions and rules.\r\n- When a worktree or branch name is mentioned.\r\n\r\n## How to query the vault\r\n- Use `brain.search_notes` with the project name, repo name, branch name, or worktree directory name.\r\n- Use `brain.list_notes` under `Project Plans/<Project>` to find plan/status notes.\r\n- Read the newest status note first (date is in the folder/note name).\r\n- Use `brain.read_note` for full content when a note is relevant.\r\n- Check `Project Plans/_Worktrees/Registry.md` for repo/worktree mapping.\r\n- Check `Project Plans/_Worktrees/Prompts.md` for suggested next steps.\r\n- If the `brain.*` tools are not available, read the vault as plain Markdown files: grep/search under `<VAULT>` and read the matching `.md` files directly.\r\n\r\n## Sorting and filtering guidance\r\n- Prefer notes under `Project Plans/<Project>/<date range>/`.\r\n- Status notes (`*- status.md`) are the source of truth for current state.\r\n- `AGENTS.md` / `RULES.md` copies are contracts, not status.\r\n- `Imported Local Docs/` contains repo-level docs not otherwise in the vault.\r\n- Worktree directory names and branch names are searchable keys.\r\n- If multiple notes match, prefer the most recent date and the one whose title matches the repo/project exactly.\r\n\r\n## Output expectations\r\n- Cite vault note paths in answers when relying on them.\r\n- If no vault note exists for the topic, say so explicitly and suggest importing the relevant local doc.\r\n- Do not paste large raw repo files when a vault summary exists.\r\n\r\n## Czkawka (duplicate / audit) sub-skill\r\n\r\nThe vault MCP server also exposes a precached czkawka cache, so agents can audit\r\ndrives/directories and clean up duplicates without running a full czkawka search\r\non every turn.\r\n\r\n### How it works\r\n- Scans run once per *scope* (mode + roots + exclusions) and are stored as scoped\r\n  JSON files under `Project Plans/Czkawka/` (`cache.<slug>.json`), indexed by\r\n  `index.json`. Scopes are precached until the same scope is rescanned or the\r\n  14-day prune limit expires.\r\n- Reads (`czkawka_duplicates`, `czkawka_big_files`, `czkawka_empty_dirs`) hit the\r\n  cache only; they never trigger a scan. Full dumps are discouraged \u2014 query with\r\n  filters and limits.\r\n- Writes (`czkawka_scan`) are gated by `CZKAWKA_ALLOW_SCAN=1` in the server env\r\n  and regenerate (replace) the cache for that scope atomically.\r\n\r\n### Tools\r\n- `czkawka_cache_status` \u2014 binary availability, cache dir, scope counts.\r\n- `czkawka_scopes` \u2014 list cached scopes.\r\n- `czkawka_scan` \u2014 run a scoped scan (dup / big / empty-folders / empty-files / temp).\r\n- `czkawka_duplicates` / `czkawka_big_files` / `czkawka_empty_dirs` \u2014 read slices.\r\n- `czkawka_prune` \u2014 delete stale scoped caches (age + count caps).\r\n- `czkawka_quarantine` \u2014 move a file into the scope's quarantine folder (never\r\n  deletes; dry-run by default).\r\n\r\n### Workflow\r\n1. Check `czkawka_scopes`; if the scope you need is cached and fresh, query it.\r\n2. Otherwise (and only if allowed) `czkawka_scan` with the exact roots/excludes.\r\n3. Review duplicates/big files; `czkawka_quarantine` (dry-run first) to stage\r\n   removals. Permanent deletion is intentionally NOT available in the vault\r\n   variant \u2014 use the standalone `czkawka-cli` skill for purging.\r\n4. `czkawka_prune` periodically to drop stale caches.\r\n\r\n### Safety\r\n- The vault is context, not source of truth for code. Always verify against the actual repo/worktree before editing.\r\n- Do not write secrets or credentials into vault notes.\r\n- Quarantine, never delete, from inside the vault variant. Purging requires the\r\n  standalone skill with an explicit confirm token.\r\n";
 
 // src/main.ts
 var DEFAULTS = { serverPath: "", python: "python" };

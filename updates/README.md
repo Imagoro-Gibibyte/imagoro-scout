@@ -4,6 +4,7 @@ Holistic entries: what changed across the system, why, and what it means. They'r
 
 | Date | Area | Entry |
 |---|---|---|
+| 2026-11-10 | repo | [A czkawka CLI skill and a 2.0 vault-memory backend](2026-11-10-czkawka-cli-agent.md) |
 | 2026-11-06 | ui | [The site gets accounts, and post edits that work](2026-11-06-site-accounts.md) |
 | 2026-11-03 | ui | [Updates attach to posts, and authors can edit with a token](2026-11-03-post-updates-and-edits.md) |
 | 2026-10-30 | harness | [Kao on vLLM, through the Rust gate](2026-10-30-kao-on-vllm.md) |

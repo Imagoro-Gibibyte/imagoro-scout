@@ -1,0 +1,10 @@
+[
+  {
+    "size": 1048576,
+    "hash": "example-hash-0000000000000000",
+    "files": [
+      "/example/photos/copy-a.jpg",
+      "/example/photos/copy-b.jpg"
+    ]
+  }
+]

@@ -6,20 +6,21 @@
     "mcp",
     "obsidian",
     "devlog",
-    "writing"
+    "writing",
+    "czkawka"
   ],
   "entries": [
     {
       "id": "vault-memory",
       "name": "Memory MCP",
       "kind": "Skill + MCP server + Obsidian plugin",
-      "summary": "Gives agents read and write access to an Obsidian vault, a skill telling them to check it before starting work, and a plugin that sets the vault up and archives old notes.",
+      "summary": "Gives agents read and write access to an Obsidian vault, a skill telling them to check it before starting work, a plugin that sets the vault up and archives old notes, plus a precached czkawka duplicate/audit cache (scoped JSON) exposed over the same MCP server.",
       "labels": [
         "memory",
         "mcp",
         "obsidian"
       ],
-      "version": "1.2.0",
+      "version": "2.0.0",
       "published": "2026-11-02",
       "license": "Apache-2.0",
       "contents": [
@@ -87,6 +88,30 @@
         "devlog_protocol.py",
         "config.example.json",
         "SETUP.md",
+        "README.md",
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "czkawka-cli",
+      "name": "Czkawka CLI",
+      "kind": "Skill + helper CLI + MCP server",
+      "summary": "Scoped, precached czkawka audits (duplicates, big files, empty folders) with a quarantine-first, dry-run-by-default transfer workflow. Runs as a standalone MCP server or delegates to a vault-memory 2.0 MCP server in consolidated mode.",
+      "labels": [
+        "files",
+        "audit",
+        "mcp",
+        "czkawka"
+      ],
+      "version": "0.1.0",
+      "published": "2026-11-10",
+      "license": "Apache-2.0",
+      "contents": [
+        "SKILL.md",
+        "czkawka_cache.py",
+        "czkawka_mcp_server.py",
+        "czkawka-cache.example.json",
+        "index.example.json",
         "README.md",
         "LICENSE"
       ]

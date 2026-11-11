@@ -1,0 +1,12 @@
+{
+  "scopes": {
+    "dup-photos-a1b2c3d4": {
+      "mode": "dup",
+      "roots": ["/example/photos"],
+      "excludes": [],
+      "mtime": "2026-11-10T00:00:00+00:00",
+      "entries": 1,
+      "cache": "cache.dup-photos-a1b2c3d4.json"
+    }
+  }
+}
