@@ -1,6 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
+const BUILD_ID = String(Date.now());
 /**
  * One static build serves the whole site: the pages and the web terminal.
  * Deep links are handled by `public/_redirects` (`/* /index.html 200`), so the
@@ -12,7 +15,18 @@ import react from "@vitejs/plugin-react";
  * self-contained demo.
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: "emit-version",
+      buildStart() {
+        writeFileSync(resolve("public", "version.json"), JSON.stringify({ buildId: BUILD_ID }));
+      }
+    }
+  ],
+  define: {
+    __BUILD_ID__: JSON.stringify(BUILD_ID)
+  },
   server: {
     port: 8794,
     strictPort: true

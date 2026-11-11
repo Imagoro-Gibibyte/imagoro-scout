@@ -37,9 +37,23 @@ function subscribe(listener: Listener): () => void {
   };
 }
 
+async function checkForUpdate(): Promise<void> {
+  try {
+    const res = await fetch("/version.json", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = (await res.json()) as { buildId?: string };
+    if (data.buildId && data.buildId !== __BUILD_ID__) {
+      window.location.reload();
+    }
+  } catch {
+    // Network or parse failure: ignore, keep the current build.
+  }
+}
+
 export function navigate(to: string): void {
   const target = normalizeRoute(to);
   if (target === path) return;
+  void checkForUpdate();
   window.history.pushState(null, "", to);
   emit();
   window.scrollTo({ top: 0 });
@@ -54,7 +68,14 @@ export function useRoute(): string {
 }
 
 if (typeof window !== "undefined") {
-  window.addEventListener("popstate", emit);
+  window.addEventListener("popstate", () => {
+    void checkForUpdate();
+    emit();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void checkForUpdate();
+  });
 
   // One delegated handler for every same-origin anchor, so a link rendered as
   // plain HTML still navigates without a full reload.
