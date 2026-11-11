@@ -5,11 +5,23 @@
   },
   "nav": [
     { "label": "Home", "route": "/" },
-    { "label": "How it works", "route": "/services" },
-    { "label": "Architecture", "route": "/insights" },
-    { "label": "About", "route": "/about" },
-    { "label": "Skills & Tools", "route": "/skills" },
-    { "label": "Terminal", "route": "/term" },
+    {
+      "label": "About us",
+      "icon": "question",
+      "children": [
+        { "label": "How it works", "route": "/services" },
+        { "label": "Architecture", "route": "/insights" },
+        { "label": "Why", "route": "/why" }
+      ]
+    },
+    {
+      "label": "Tools",
+      "icon": "harness",
+      "children": [
+        { "label": "Web term", "route": "/terminal" },
+        { "label": "Agent skills & tools", "route": "/skills" }
+      ]
+    },
     { "label": "Contact", "route": "/contact" }
   ],
   "footer": {
@@ -135,14 +147,29 @@
       ]
     },
     {
-      "route": "/about",
-      "title": "About",
-      "description": "The workflow and the policy are one design, not two layers",
+      "route": "/why",
+      "title": "Why",
+      "description": "Mission and design philosophy: why Imagoro is built the way it is",
       "sections": [
+        {
+          "kind": "hero",
+          "headline": "Governance is the substrate, not a layer on top.",
+          "sub": "Most agent tooling hands the model capability and bolts governance on somewhere behind it. Imagoro does the opposite: the same matrix that grants a read is what generates the rule that permits the row, so an agent's capability is exactly the capability the policy already decided — and nothing widens by accident."
+        },
+        {
+          "kind": "features",
+          "headline": "Why this shape",
+          "features": [
+            { "title": "One matrix, no second source of truth", "body": "Every read, write and audit decision derives from a single policy matrix. The database rules are generated from it, never hand-edited, and a drift between the server and the harness is a failed gate rather than a runtime surprise." },
+            { "title": "Fail closed, not open", "body": "Category and kind pairs the matrix does not bind are denied with the same structured error on all three code paths. Reads are public, writes are staff-only, and audit access never widens alongside them." },
+            { "title": "An agentic surface that leaves a receipt", "body": "Kao is an MCP harness, not a script runner. A publish is a validated, hashed, enveloped transaction, so what an agent changed is verifiable after the fact and not merely asserted." },
+            { "title": "Agents don't act, runners do", "body": "Models have no tools. Runners read and write the blackboard, and only a guarded executor changes a host, after a human approves." }
+          ]
+        },
         {
           "kind": "text",
           "headline": "What the system actually is",
-          "sub": "Most agent tooling hands the model capability and bolts governance on somewhere behind it. Here the governance is the substrate: the same matrix that grants a read is what generates the rule that permits the row, so an agent's capability is exactly the capability the policy already decided — and nothing widens by accident.",
+          "sub": "The pieces, and where each one runs.",
           "points": [
             "The client — a composable block GUI and a node canvas, with twelve block families on one manifest contract.",
             "The harness — Imagoro Kao, the MCP/agentic harness. Its first rendition wraps the Scout CLI.",
@@ -150,15 +177,6 @@
             "Auth — boot-time sign-in wiring: TOTP, plus FIDO2 physical keys.",
             "Artifacts — a signed catalog with profiles and OTA, so a published artifact carries its own provenance.",
             "Gates — the milestone suites. The client, harness and server tests all have to pass."
-          ]
-        },
-        {
-          "kind": "features",
-          "headline": "Where the trust boundaries sit",
-          "features": [
-            { "title": "One matrix, no second source of truth", "body": "Every read, write and audit decision derives from a single policy matrix. The database rules are generated from it, never hand-edited, and a drift between the server and the harness is a failed gate rather than a runtime surprise." },
-            { "title": "Fail closed, not open", "body": "Category and kind pairs the matrix does not bind are denied with the same structured error on all three code paths. Reads are public, writes are staff-only, and audit access never widens alongside them." },
-            { "title": "An agentic surface that leaves a receipt", "body": "Kao is an MCP harness, not a script runner. A publish is a validated, hashed, enveloped transaction, so what an agent changed is verifiable after the fact and not merely asserted." }
           ]
         },
         {

@@ -139,8 +139,8 @@ function NotFoundText({ route }: { route: string }) {
         <Link to="/insights" className="pf-btn">
           /insights
         </Link>
-        <Link to="/about" className="pf-btn">
-          /about
+        <Link to="/why" className="pf-btn">
+          /why
         </Link>
         <Link to="/skills" className="pf-btn">
           /skills

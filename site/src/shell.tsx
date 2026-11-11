@@ -17,19 +17,55 @@ const TerminalPage = lazy(() =>
   import("./term/App").then((module) => ({ default: module.TerminalPage }))
 );
 
+function NavIcon({ name }: { name?: string }) {
+  if (name === "question") {
+    return <span className="pf-nav-icon" aria-hidden="true">?</span>;
+  }
+  if (name === "harness") {
+    return (
+      <span className="pf-nav-icon pf-nav-icon-img" aria-hidden="true">
+        <img src="/icons/harness-32.png" alt="" width={18} height={18} />
+      </span>
+    );
+  }
+  return null;
+}
+
 function Nav({ route }: { route: string }) {
   return (
     <nav className="pf-nav" aria-label="Main">
-      {nav.map((item) => (
-        <Link
-          className="pf-nav-link"
-          key={item.route}
-          to={item.route}
-          aria-current={item.route === route ? "page" : undefined}
-        >
-          {item.label}
-        </Link>
-      ))}
+      {nav.map((item) =>
+        item.children ? (
+          <div className="pf-nav-group" key={item.label}>
+            <button className="pf-nav-link pf-nav-trigger" type="button" aria-haspopup="true">
+              <NavIcon name={item.icon} />
+              <span className="pf-nav-label">{item.label}</span>
+              <span className="pf-nav-caret" aria-hidden="true">▾</span>
+            </button>
+            <div className="pf-nav-dropdown" role="menu">
+              {item.children.map((child) => (
+                <Link
+                  className="pf-nav-dropdown-link"
+                  key={child.route}
+                  to={child.route}
+                  aria-current={child.route === route ? "page" : undefined}
+                >
+                  {child.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Link
+            className="pf-nav-link"
+            key={item.label}
+            to={item.route ?? "/"}
+            aria-current={item.route === route ? "page" : undefined}
+          >
+            {item.label}
+          </Link>
+        )
+      )}
       <AccountChip />
     </nav>
   );

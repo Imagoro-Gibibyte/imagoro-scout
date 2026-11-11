@@ -18,9 +18,22 @@ const REPO = (import.meta.env.VITE_REPO_URL ?? "").replace(/\/+$/, "");
 
 export const repoUrl: string = REPO;
 
-export interface NavItem {
+export interface NavLink {
   label: string;
   route: string;
+}
+
+export interface NavChild {
+  label: string;
+  route: string;
+  icon?: string;
+}
+
+export interface NavItem {
+  label: string;
+  route?: string;
+  icon?: string;
+  children?: readonly NavChild[];
 }
 
 export type Section = { style?: SectionStyle } & (

@@ -89,6 +89,102 @@
   background: rgba(0, 201, 199, 0.07);
 }
 
+/* ---------- header dropdowns ---------- */
+.pf-nav-group {
+  position: relative;
+  display: inline-block;
+}
+
+.pf-nav-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: transparent;
+  font: inherit;
+}
+
+.pf-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: width 180ms ease, opacity 180ms ease, margin 180ms ease;
+  vertical-align: middle;
+}
+
+.pf-nav-icon img {
+  display: block;
+}
+
+/* reveal iconography on header hover, expanding the trigger slightly */
+.pf-header:hover .pf-nav-icon {
+  width: 20px;
+  opacity: 1;
+  margin-right: 2px;
+}
+
+.pf-nav-caret {
+  font-size: 10px;
+  opacity: 0.7;
+  transition: transform 180ms ease;
+}
+
+.pf-nav-group:hover .pf-nav-caret {
+  transform: rotate(180deg);
+}
+
+.pf-nav-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-s);
+  margin-top: 4px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 20;
+}
+
+.pf-nav-group:hover .pf-nav-dropdown,
+.pf-nav-group:focus-within .pf-nav-dropdown {
+  display: flex;
+}
+
+.pf-nav-dropdown-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-s) var(--spacing-m);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.pf-nav-dropdown-link:hover {
+  color: var(--text-strong);
+  background: var(--bg);
+}
+
+.pf-nav-dropdown-link[aria-current="page"] {
+  color: var(--teal);
+}
+
+/* header expands slightly on hover to accommodate icons */
+.pf-header {
+  transition: padding 180ms ease;
+}
+
+.pf-header:hover {
+  padding-bottom: calc(var(--spacing-m) + 4px);
+}
+
 /* ---------- main ---------- */
 
 .pf-main {
