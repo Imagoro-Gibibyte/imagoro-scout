@@ -1,23 +1,25 @@
 /**
  * Cloudflare Worker that relays the site's mail: edit tokens, email confirmations and
- * password resets.
+ * password resets. It sends through Cloudflare Email Service, so no provider key is involved.
  *
  * Bind this worker's URL as MAIL_PROVIDER_URL in the Pages project. The Pages functions
  * POST { to, subject, text } here with `Authorization: Bearer <MAIL_API_KEY>`, so set the
- * Pages MAIL_API_KEY to the same value as this worker's RELAY_TOKEN. MAIL_API_KEY here is the
- * provider key (e.g. a Resend API key) and never leaves this worker.
+ * Pages MAIL_API_KEY to the same value as this worker's RELAY_TOKEN.
+ *
+ * The sending domain must be onboarded to Email Sending (dashboard: Email Service >
+ * Email Sending > Onboard Domain), which needs the Workers Paid plan to reach any recipient.
  *
  * Deploy:  cd site/email-worker && npx wrangler deploy
- * Secrets: npx wrangler secret put MAIL_API_KEY
- *          npx wrangler secret put RELAY_TOKEN
+ * Secret:  npx wrangler secret put RELAY_TOKEN
  */
 interface Env {
-  MAIL_API_KEY: string;
+  EMAIL: SendEmail;
   /** Callers must present this. Without it the relay refuses everything, so it can't be used for spam. */
   RELAY_TOKEN?: string;
   MAIL_FROM?: string;
-  RESEND_URL?: string;
 }
+
+const MAX = { subject: 200, text: 10_000 };
 
 async function digest(text: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
@@ -35,6 +37,7 @@ export default {
     const given = request.headers.get("Authorization")?.replace(/^Bearer /, "") ?? "";
     if (!env.RELAY_TOKEN) return new Response("Not configured", { status: 503 });
     if (!(await sameToken(given, env.RELAY_TOKEN))) return new Response("Unauthorized", { status: 401 });
+
     let body: { to?: string; subject?: string; text?: string };
     try {
       body = (await request.json()) as typeof body;
@@ -42,21 +45,23 @@ export default {
       return Response.json({ ok: false, reason: "bad json" }, { status: 400 });
     }
     const to = String(body.to ?? "").trim();
-    const subject = String(body.subject ?? "Your edit token").trim();
+    const subject = String(body.subject ?? "").trim();
     const text = String(body.text ?? "").trim();
-    if (!to || !text) return Response.json({ ok: false, reason: "missing fields" }, { status: 422 });
-
-    const url = env.RESEND_URL || "https://api.resend.com/emails";
-    const from = env.MAIL_FROM || "noreply@imagoro.net";
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.MAIL_API_KEY}` },
-      body: JSON.stringify({ from, to, subject, text })
-    });
-    if (!res.ok) {
-      // The provider's reply can echo the recipient, so it isn't passed back.
-      return Response.json({ ok: false, reason: "provider error", status: res.status }, { status: 502 });
+    // One recipient per message, so a caller can't turn the relay into a mailing list.
+    if (!/^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$/.test(to) || !subject || !text) {
+      return Response.json({ ok: false, reason: "missing or invalid fields" }, { status: 422 });
     }
-    return Response.json({ ok: true });
+    if (subject.length > MAX.subject || text.length > MAX.text) {
+      return Response.json({ ok: false, reason: "too long" }, { status: 413 });
+    }
+
+    try {
+      const sent = await env.EMAIL.send({ to, from: env.MAIL_FROM || "noreply@imagoro.net", subject, text });
+      return Response.json({ ok: true, id: sent.messageId });
+    } catch (err) {
+      // The error code says why without echoing the recipient.
+      const code = (err as { code?: string }).code ?? "E_UNKNOWN";
+      return Response.json({ ok: false, reason: "send failed", code }, { status: 502 });
+    }
   }
 };

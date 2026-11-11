@@ -150,8 +150,11 @@ Without it, those pages point at `/contact`.
 
 ### Mail relay
 
-`email-worker/` relays the site's mail to the provider. It answers only requests that carry
-its `RELAY_TOKEN` as a bearer token, and refuses everything when that isn't set.
+`email-worker/` relays the site's mail through Cloudflare Email Service, with a `send_email`
+binding that may only send from the no-reply address. It answers only requests that carry
+its `RELAY_TOKEN` as a bearer token, refuses everything when that isn't set, and sends one
+recipient per message. The sending domain has to be onboarded to Email Sending first, and
+reaching any recipient needs the Workers Paid plan.
 
 ## The terminal
 

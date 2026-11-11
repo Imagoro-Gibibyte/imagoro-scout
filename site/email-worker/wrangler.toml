@@ -4,4 +4,8 @@ compatibility_date = "2026-11-03"
 
 [vars]
 MAIL_FROM = "noreply@imagoro.net"
-RESEND_URL = "https://api.resend.com/emails"
+
+# Cloudflare Email Service. Only the site's no-reply address can send through this binding.
+[[send_email]]
+name = "EMAIL"
+allowed_sender_addresses = ["noreply@imagoro.net"]
